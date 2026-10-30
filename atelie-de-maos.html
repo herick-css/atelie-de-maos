@@ -342,6 +342,7 @@ label.btn { display: inline-block; cursor: pointer; }
       <button type="button" id="go-3d"><i>Modo 3D</i><b>Mão em 3D</b><span>Monte uma mão 3D, escolha a pose e decore as unhas girando à vontade.</span></button>
       <button type="button" id="go-ar"><i>Modo AR</i><b>Foto da sua mão</b><span>Escolha uma pose, tire uma foto da mão e decore as unhas de verdade na imagem.</span></button>
     </div>
+    <p class="note" id="diag"></p>
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -2233,11 +2234,22 @@ const ITEM_CORES = [
 
   /* ---------- estado salvo (sobrevive se o celular recarregar a página ao abrir a câmera) ---------- */
   const KEY = 'atelie-de-maos:estado', KEY_FOTO = 'atelie-de-maos:foto', KEY_CAM = 'atelie-de-maos:camera';
-  const store = {
-    get(k) { try { return localStorage.getItem(k); } catch (e) { try { return sessionStorage.getItem(k); } catch (e2) { return null; } } },
-    set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { try { sessionStorage.setItem(k, v); return true; } catch (e2) { return false; } } },
-    del(k) { try { localStorage.removeItem(k); } catch (e) { } try { sessionStorage.removeItem(k); } catch (e) { } },
+  // localStorage quando o site permite; senão window.name (sobrevive à recarga do mesmo quadro, mesmo em iframe isolado)
+  const LS = (() => { try { const k = '__t'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return localStorage; } catch (e) { return null; } })();
+  const WN = {
+    read() { try { const s = window.name; return s && s.startsWith('atelie:') ? JSON.parse(s.slice(7)) : {}; } catch (e) { return {}; } },
+    write(o) { try { window.name = 'atelie:' + JSON.stringify(o); return true; } catch (e) { return false; } },
   };
+  const store = {
+    get(k) { let v = null; if (LS) { try { v = LS.getItem(k); } catch (e) { } } if (v == null) v = WN.read()[k] ?? null; return v; },
+    set(k, v) { let ok = false; if (LS) { try { LS.setItem(k, v); ok = true; } catch (e) { } } const o = WN.read(); o[k] = v; return WN.write(o) || ok; },
+    del(k) { if (LS) { try { LS.removeItem(k); } catch (e) { } } const o = WN.read(); delete o[k]; WN.write(o); },
+  };
+  const diag = { storage: LS ? 'navegador (localStorage)' : 'quadro da página (window.name)', restored: 'não', camera: false };
+  function showDiag() {
+    const el = $('diag'); if (!el) return;
+    el.textContent = 'Diagnóstico: memória usada = ' + diag.storage + ' · estado restaurado = ' + diag.restored + (diag.camera ? ' · a página recarregou durante a câmera' : '');
+  }
   function saveState() {
     stateDirty = false;
     const s = {
@@ -2276,7 +2288,9 @@ const ITEM_CORES = [
   async function restoreState() {
     let s = null;
     try { s = JSON.parse(store.get(KEY) || 'null'); } catch (e) { s = null; }
-    if (!s || Date.now() - s.t > 15 * 60 * 1000) return false;
+    diag.camera = !!store.get(KEY_CAM);
+    if (!s) { diag.restored = 'não havia estado salvo'; showDiag(); return false; }
+    if (Date.now() - s.t > 15 * 60 * 1000) { diag.restored = 'estado antigo (mais de 15 min)'; showDiag(); return false; }
     if (Array.isArray(s.nails) && s.nails.length === 5) s.nails.forEach((n, i) => (nails[i] = n));
     if (s.nailOpt) Object.assign(nailOpt, s.nailOpt);
     syncSliders(); markNailShape(); refreshNailUI();
@@ -2294,6 +2308,7 @@ const ITEM_CORES = [
       if (cam) { pendingCamera(false); arStatus('O celular recarregou a página quando a câmera abriu e a foto se perdeu. Tente de novo; se continuar, tire a foto pelo app da câmera e use "Escolher da galeria".'); }
     }
     queuePaint([0, 1, 2, 3, 4]); buildNails();
+    diag.restored = 'sim (' + Math.round((Date.now() - s.t) / 1000) + ' s atrás)'; showDiag();
     return true;
   }
 
@@ -2310,7 +2325,7 @@ const ITEM_CORES = [
   addItem({ cat: 'p', idx: 0 }, 3, 0, models[3].Lf * 0.3, { color: '#f4f8ff' });
   addItem({ cat: 'p', idx: 6 }, 3, 0.18, models[3].Lf * 0.62, { size: 0.6, color: '#fbf6ee' });
   select(null); updateCount();
-  restoreState().catch(() => { });
+  restoreState().catch(e => { diag.restored = 'erro: ' + (e && e.message); showDiag(); });
   requestAnimationFrame(tick);
 })();
 </script>
