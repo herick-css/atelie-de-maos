@@ -53,7 +53,7 @@ button { cursor: pointer; }
 .panel { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; min-width: 0; padding: 18px max(16px, env(safe-area-inset-right, 0px)) 28px 16px; }
 .panel h1 { font: 700 26px/1.05 var(--f-display); letter-spacing: -0.01em; margin: 0 0 4px; text-wrap: balance; }
 .panel .sub { color: var(--muted); margin: 0 0 14px; max-width: 36ch; }
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--chip); border-radius: 8px; padding: 4px; position: sticky; top: -18px; z-index: 2; margin: 0 0 4px; }
+.tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; background: var(--chip); border-radius: 8px; padding: 4px; position: sticky; top: -18px; z-index: 2; margin: 0 0 4px; }
 .tabs button { border: 0; background: transparent; border-radius: 6px; padding: 7px 4px; font-weight: 500; font-size: 13px; }
 .tabs button[aria-selected="true"] { background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
 section { padding: 16px 0; border-top: 1px solid var(--line); }
@@ -186,6 +186,7 @@ label.btn { display: inline-block; cursor: pointer; }
     <p class="sub">Monte a mão, escolha formato, desenho e acabamento de cada unha e aplique adesivos e pingentes.</p>
     <nav class="tabs" role="tablist">
       <button type="button" role="tab" data-tab="foto" aria-selected="false" hidden>Foto</button>
+      <button type="button" role="tab" data-tab="ajuste" aria-selected="false" hidden>Ajustar</button>
       <button type="button" role="tab" data-tab="mao" aria-selected="true">Mão</button>
       <button type="button" role="tab" data-tab="unhas" aria-selected="false">Unhas</button>
       <button type="button" role="tab" data-tab="deco" aria-selected="false">Decoração</button>
@@ -199,23 +200,26 @@ label.btn { display: inline-block; cursor: pointer; }
       </section>
       <section>
         <h2>2. Foto</h2>
+        <p class="note" style="margin:0 0 10px">Se o celular recarregar a página ao abrir a câmera, o Ateliê volta para este ponto. Se continuar acontecendo, tire a foto pelo app da câmera e use "Escolher da galeria".</p>
         <div class="row" style="margin-top:0">
           <label class="btn" for="ph-cam">Tirar foto</label><input type="file" id="ph-cam" accept="image/*" capture="environment" hidden>
           <label class="btn ghost" for="ph-gal">Escolher da galeria</label><input type="file" id="ph-gal" accept="image/*" hidden>
         </div>
         <p class="ar-status" id="ar-status">Nenhuma foto ainda. Fotografe com boa luz, a mão inteira na foto e o fundo liso.</p>
       </section>
+    </div>
+
+    <div class="tabpane" id="tab-ajuste" hidden>
       <section>
-        <h2>3. Ajustar unhas</h2>
+        <h2>Ajustar unhas na foto</h2>
         <div class="chips">
-          <button class="chip" type="button" id="ar-adjust" aria-pressed="true">Mostrar alças de ajuste</button>
           <button class="chip" type="button" id="ar-redetect">Detectar de novo</button>
           <button class="chip" type="button" id="ar-tplfit">Posicionar pelo modelo</button>
         </div>
         <h2 style="margin-top:14px">Unhas na foto</h2>
         <div class="chips" id="ar-vis"></div>
         <div class="sliders" id="ar-sliders" style="margin-top:12px"></div>
-        <p class="note">Toque numa unha para escolhê-la. Arraste o círculo da cutícula, o círculo da ponta e os quadradinhos laterais (largura). Arraste o meio da unha para movê-la. Fora das unhas, arraste para mover a foto; role ou faça pinça para dar zoom.</p>
+        <p class="note">As alças só aparecem enquanto esta aba está aberta. Toque numa unha para escolhê-la. Arraste o círculo da cutícula, o círculo da ponta e os quadradinhos laterais (largura). Arraste o meio da unha para movê-la. Fora das unhas, arraste para mover a foto; role ou faça pinça para dar zoom.</p>
       </section>
     </div>
 
@@ -1189,7 +1193,7 @@ const ITEM_CORES = [
   const arGroup = new THREE.Group(); scene.add(arGroup);
 
   // ambiente para reflexos (estúdio com softboxes)
-  {
+  function buildEnv() {
     const pm = new THREE.PMREMGenerator(renderer);
     const es = new THREE.Scene();
     const sg = new THREE.SphereGeometry(40, 32, 16), pa = sg.attributes.position, cols = [];
@@ -1198,9 +1202,12 @@ const ITEM_CORES = [
     es.add(new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ side: THREE.BackSide, vertexColors: true })));
     const panel = (w, h, p, k) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(k, k, k), side: THREE.DoubleSide })); m.position.set(p[0], p[1], p[2]); m.lookAt(0, 0, 0); es.add(m); };
     panel(18, 12, [-18, 22, 22], 2); panel(30, 4, [24, 4, 14], 1); panel(14, 14, [6, 14, -30], 1.25); panel(8, 30, [-30, 0, -8], 0.75);
+    if (scene.environment) scene.environment.dispose();
     scene.environment = pm.fromScene(es, 0.02).texture;
     pm.dispose();
   }
+  buildEnv();
+  let gpuPaused = false, stateDirty = false;
 
   const pivot = new THREE.Group(), flip = new THREE.Group(), hand = new THREE.Group();
   let offY = -6, tOffY = -6;
@@ -1523,15 +1530,16 @@ const ITEM_CORES = [
     else if (!dragging && (Math.abs(tYaw - yaw) > 0.001 || Math.abs(tPitch - pitch) > 0.001)) { yaw += (tYaw - yaw) * 0.16; pitch += (tPitch - pitch) * 0.16; need = true; }
     if (Math.abs(tOffY - offY) > 0.01) { offY += (tOffY - offY) * 0.14; hand.position.y = offY; need = true; }
     if (tDist !== null) { if (Math.abs(tDist - camDist) > 0.05) { camDist += (tDist - camDist) * 0.14; updateCam(); } else tDist = null; }
-    if (need) { pivot.rotation.set(pitch, yaw, 0, 'YXZ'); renderer.render(scene, activeCam); arOverlay(); need = false; }
+    if (need && !gpuPaused) { pivot.rotation.set(pitch, yaw, 0, 'YXZ'); renderer.render(scene, activeCam); arOverlay(); need = false; stateDirty = true; }
     requestAnimationFrame(tick);
   }
 
   /* ---------- abas ---------- */
   document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
     document.querySelectorAll('[data-tab]').forEach(t => t.setAttribute('aria-selected', String(t === b)));
-    ['foto', 'mao', 'unhas', 'deco'].forEach(n => ($('tab-' + n).hidden = n !== b.dataset.tab));
+    ['foto', 'ajuste', 'mao', 'unhas', 'deco'].forEach(n => ($('tab-' + n).hidden = n !== b.dataset.tab));
     if (b.dataset.tab !== 'deco') arm(null);
+    AR.adjust = b.dataset.tab === 'ajuste'; need = true;
   }));
 
   /* ---------- exibição ---------- */
@@ -1832,7 +1840,7 @@ const ITEM_CORES = [
     { name: 'Punho', tip: 'Mão fechada, com as unhas dos 4 dedos viradas para a câmera.', pose: { curl: 1, spread: 0, thumbOut: 0 } },
     { name: 'Só a ponta dos dedos', tip: 'Close nas pontas dos dedos esticados, dorso para a câmera (fica mais nítido).', pose: { curl: 0, spread: 0.2, thumbOut: 0.35 }, crop: true },
   ];
-  const AR = { tpl: 0, tplData: null, specs: null, adjust: true, iw: 0, ih: 0, pix: null, canvas: null, photo: null, detector: null, detFail: null };
+  const AR = { tpl: 0, tplData: null, specs: null, adjust: false, iw: 0, ih: 0, pix: null, canvas: null, photo: null, detector: null, detFail: null };
   const arT = { arScale: 1, arRot: 0 }; let arPrev = { s: 1, r: 0 };
 
   function computeTemplates() {
@@ -2012,15 +2020,27 @@ const ITEM_CORES = [
     markVis(); buildARNails(); applyMode();
   }
 
+  async function imgToCanvas(src) {
+    const img = new Image(); img.src = src;
+    await img.decode();
+    const s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * s); cv.height = Math.round(img.naturalHeight * s);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    return cv;
+  }
   async function loadPhoto(file) {
     if (!file) return;
     arStatus('Carregando a foto...');
-    const url = URL.createObjectURL(file), img = new Image();
-    img.src = url;
-    try { await img.decode(); } catch (e) { arStatus('Não consegui abrir essa imagem. Tente outra foto (JPG ou PNG).'); return; }
-    const s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
-    const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * s); cv.height = Math.round(img.naturalHeight * s);
-    const g = cv.getContext('2d'); g.drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(file);
+    let cv;
+    try { cv = await imgToCanvas(url); } catch (e) { arStatus('Não consegui abrir essa imagem. Tente outra foto (JPG ou PNG).'); return; } finally { URL.revokeObjectURL(url); }
+    usePhotoCanvas(cv);
+    savePhoto(cv);
+    await detectNails();
+    document.querySelector('[data-tab="ajuste"]').click();
+  }
+  function usePhotoCanvas(cv) {
+    const g = cv.getContext('2d');
     AR.canvas = cv; AR.iw = cv.width; AR.ih = cv.height; AR.pix = g.getImageData(0, 0, cv.width, cv.height);
     if (AR.photo) { arGroup.remove(AR.photo); AR.photo.geometry.dispose(); AR.photo.material.map.dispose(); AR.photo.material.dispose(); }
     const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
@@ -2029,12 +2049,13 @@ const ITEM_CORES = [
     arGroup.add(AR.photo);
     $('ar-empty').hidden = true;
     arFit();
-    await detectNails();
   }
-  ['ph-cam', 'ph-gal'].forEach(id => $(id).addEventListener('change', e => { loadPhoto(e.target.files[0]); e.target.value = ''; }));
+  ['ph-cam', 'ph-gal'].forEach(id => {
+    $(id).addEventListener('click', () => { pendingCamera(true); freeGPU(); });
+    $(id).addEventListener('change', e => { restoreGPU(); pendingCamera(false); loadPhoto(e.target.files[0]); e.target.value = ''; });
+  });
   $('ar-redetect').addEventListener('click', () => detectNails());
   $('ar-tplfit').addEventListener('click', () => { if (!AR.canvas) return; setSpecs(specsFromTemplate()); arStatus('Unhas posicionadas pelo modelo "' + AR_TEMPLATES[AR.tpl].name + '". Arraste para encaixar.'); });
-  $('ar-adjust').addEventListener('click', e => { AR.adjust = !AR.adjust; e.currentTarget.setAttribute('aria-pressed', String(AR.adjust)); need = true; });
   const vis = $('ar-vis');
   DEDOS.forEach((n, i) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = n;
@@ -2189,6 +2210,7 @@ const ITEM_CORES = [
     $('hud3d').hidden = ar;
     $('hint').textContent = ar ? 'arraste para mover a foto · role ou pinça para zoom' : 'arraste para girar · role para zoom';
     document.querySelector('[data-tab="foto"]').hidden = !ar;
+    document.querySelector('[data-tab="ajuste"]').hidden = !ar;
     document.querySelector('[data-tab="mao"]').hidden = ar;
     document.querySelector('[data-tab="' + (ar ? 'foto' : 'mao') + '"]').click();
     canvas.setAttribute('aria-label', ar ? 'Foto da mão com as unhas editáveis.' : 'Mão 3D. Arraste para girar, role para aproximar.');
@@ -2208,6 +2230,73 @@ const ITEM_CORES = [
   $('switch-mode').addEventListener('click', () => { $('start').hidden = false; });
 
 
+
+  /* ---------- estado salvo (sobrevive se o celular recarregar a página ao abrir a câmera) ---------- */
+  const KEY = 'atelie-de-maos:estado', KEY_FOTO = 'atelie-de-maos:foto', KEY_CAM = 'atelie-de-maos:camera';
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { try { return sessionStorage.getItem(k); } catch (e2) { return null; } } },
+    set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { try { sessionStorage.setItem(k, v); return true; } catch (e2) { return false; } } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) { } try { sessionStorage.removeItem(k); } catch (e) { } },
+  };
+  function saveState() {
+    stateDirty = false;
+    const s = {
+      t: Date.now(), mode: appMode, tpl: AR.tpl, nails, nailOpt: { ...nailOpt }, specs: AR.specs,
+      items: items.map(it => ({ cat: it.cat, idx: it.idx, nail: it.nail, xn: it.xn, vn: it.vn, size: it.size, rot: it.rot, color: it.color })),
+    };
+    store.set(KEY, JSON.stringify(s));
+  }
+  function savePhoto(cv) {
+    for (const [max, q] of [[1600, 0.85], [1100, 0.8], [800, 0.75]]) {
+      let c = cv;
+      if (Math.max(cv.width, cv.height) > max) { const k = max / Math.max(cv.width, cv.height); c = document.createElement('canvas'); c.width = Math.round(cv.width * k); c.height = Math.round(cv.height * k); c.getContext('2d').drawImage(cv, 0, 0, c.width, c.height); }
+      if (store.set(KEY_FOTO, c.toDataURL('image/jpeg', q))) return;
+    }
+  }
+  function pendingCamera(on) { if (on) { saveState(); store.set(KEY_CAM, String(Date.now())); } else store.del(KEY_CAM); }
+  setInterval(() => { if (stateDirty) saveState(); }, 1500);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveState(); else restoreGPU(); });
+  window.addEventListener('pagehide', saveState);
+  window.addEventListener('focus', () => { setTimeout(restoreGPU, 300); setTimeout(() => pendingCamera(false), 4000); });
+
+  // libera a memória de vídeo enquanto o app da câmera está aberto (no celular)
+  let lostExt = null;
+  function freeGPU() {
+    saveState();
+    if (!matchMedia('(pointer: coarse)').matches) return;
+    try { const ext = renderer.getContext().getExtension('WEBGL_lose_context'); if (ext) { gpuPaused = true; ext.loseContext(); lostExt = ext; } } catch (e) { gpuPaused = false; }
+  }
+  function restoreGPU() {
+    if (!lostExt) return;
+    const ext = lostExt; lostExt = null;
+    canvas.addEventListener('webglcontextrestored', () => { setTimeout(() => { buildEnv(); [...nailTex].forEach(t => (t.needsUpdate = true)); gpuPaused = false; need = true; }, 0); }, { once: true });
+    try { ext.restoreContext(); } catch (e) { gpuPaused = false; need = true; }
+  }
+
+  async function restoreState() {
+    let s = null;
+    try { s = JSON.parse(store.get(KEY) || 'null'); } catch (e) { s = null; }
+    if (!s || Date.now() - s.t > 15 * 60 * 1000) return false;
+    if (Array.isArray(s.nails) && s.nails.length === 5) s.nails.forEach((n, i) => (nails[i] = n));
+    if (s.nailOpt) Object.assign(nailOpt, s.nailOpt);
+    syncSliders(); markNailShape(); refreshNailUI();
+    items.slice().forEach(removeItem);
+    if (Array.isArray(s.items)) s.items.forEach(d => { const it = { ...d }; makeObj(it); items.push(it); });
+    updateCount();
+    AR.tpl = s.tpl || 0;
+    setAppMode(s.mode === 'ar' ? 'ar' : '3d');
+    if (s.mode === 'ar') {
+      markTpl();
+      const foto = store.get(KEY_FOTO), cam = store.get(KEY_CAM);
+      if (foto && s.specs) {
+        try { usePhotoCanvas(await imgToCanvas(foto)); AR.specs = s.specs; markVis(); buildARNails(); applyMode(); arStatus('Voltei para a sua última foto. Tire outra quando quiser.'); } catch (e) { }
+      }
+      if (cam) { pendingCamera(false); arStatus('O celular recarregou a página quando a câmera abriu e a foto se perdeu. Tente de novo; se continuar, tire a foto pelo app da câmera e use "Escolher da galeria".'); }
+    }
+    queuePaint([0, 1, 2, 3, 4]); buildNails();
+    return true;
+  }
+
   /* ---------- início ---------- */
   setShape(PRESETS[1][1]); Object.assign(pose, POSES[1][1]); syncSliders();
   markPreset(); markPose(); markNailShape(); markItemColor(null);
@@ -2221,6 +2310,7 @@ const ITEM_CORES = [
   addItem({ cat: 'p', idx: 0 }, 3, 0, models[3].Lf * 0.3, { color: '#f4f8ff' });
   addItem({ cat: 'p', idx: 6 }, 3, 0.18, models[3].Lf * 0.62, { size: 0.6, color: '#fbf6ee' });
   select(null); updateCount();
+  restoreState().catch(() => { });
   requestAnimationFrame(tick);
 })();
 </script>
