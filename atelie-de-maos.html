@@ -1,0 +1,2220 @@
+<title>Ateliê de Mãos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: palco 3D à esquerda, painel com abas à direita; empilha no celular */
+:root {
+  --bg: #e9eced; --panel: #f6f7f7; --fg: #172023; --muted: #5d6a6e; --line: #d3d9db;
+  --accent: #0e7c86; --accent-fg: #ffffff; --stage-a: #f4f6f6; --stage-b: #d9dfe1;
+  --chip: #e6eaeb; --chip-on: #172023; --chip-on-fg: #f6f7f7; --banner: #172023; --banner-fg: #f6f7f7;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111517; --panel: #1a1f21; --fg: #e7eced; --muted: #93a0a4; --line: #2b3336;
+    --accent: #4cc2cf; --accent-fg: #062a2e; --stage-a: #2b3336; --stage-b: #12171a;
+    --chip: #242b2e; --chip-on: #e7eced; --chip-on-fg: #14191b; --banner: #e7eced; --banner-fg: #14191b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111517; --panel: #1a1f21; --fg: #e7eced; --muted: #93a0a4; --line: #2b3336;
+  --accent: #4cc2cf; --accent-fg: #062a2e; --stage-a: #2b3336; --stage-b: #12171a;
+  --chip: #242b2e; --chip-on: #e7eced; --chip-on-fg: #14191b; --banner: #e7eced; --banner-fg: #14191b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--f-body); }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 392px; height: 100%; min-height: 560px; }
+.stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: radial-gradient(ellipse at 50% 42%, var(--stage-a), var(--stage-b)); }
+#gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#gl.place { cursor: crosshair; }
+.hud { position: absolute; left: 16px; right: 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; pointer-events: none; }
+.hud > * { pointer-events: auto; }
+.hud.top { top: 14px; }
+.hud.bot { bottom: 14px; justify-content: space-between; }
+.stats { font: 12px var(--f-mono); color: var(--muted); line-height: 1.5; pointer-events: none; }
+.hint { font-size: 12px; color: var(--muted); }
+.banner { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); background: var(--banner); color: var(--banner-fg); border-radius: 8px; padding: 8px 8px 8px 14px; display: flex; gap: 10px; align-items: center; font-size: 13px; max-width: calc(100% - 32px); box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+.banner button { background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 6px; padding: 3px 9px; opacity: .85; }
+
+.panel { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; min-width: 0; padding: 18px max(16px, env(safe-area-inset-right, 0px)) 28px 16px; }
+.panel h1 { font: 700 26px/1.05 var(--f-display); letter-spacing: -0.01em; margin: 0 0 4px; text-wrap: balance; }
+.panel .sub { color: var(--muted); margin: 0 0 14px; max-width: 36ch; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--chip); border-radius: 8px; padding: 4px; position: sticky; top: -18px; z-index: 2; margin: 0 0 4px; }
+.tabs button { border: 0; background: transparent; border-radius: 6px; padding: 7px 4px; font-weight: 500; font-size: 13px; }
+.tabs button[aria-selected="true"] { background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+section { padding: 16px 0; border-top: 1px solid var(--line); }
+.tabpane > section:first-child { border-top: 0; }
+h2 { font: 600 11px var(--f-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; display: flex; justify-content: space-between; gap: 8px; }
+h2 .val { font: 500 12px var(--f-mono); letter-spacing: 0; text-transform: none; color: var(--fg); text-align: right; }
+.note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--chip); border: 1px solid transparent; border-radius: 6px; padding: 6px 10px; font-size: 13px; line-height: 1.2; }
+.chip:hover { border-color: var(--line); }
+.chip[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-fg); }
+.chip:disabled { opacity: .4; cursor: default; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.seg .chip { text-align: center; }
+
+.tones { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.tone { aspect-ratio: 1; width: 100%; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); padding: 0; }
+.tone[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--accent); }
+.tone-name { margin-top: 8px; font: 12px var(--f-mono); color: var(--muted); }
+
+/* grades de miniaturas */
+.grid { display: grid; gap: 6px; }
+.grid.shapes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.grid.pats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.grid.items { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.tile { background: var(--chip); border: 1px solid transparent; border-radius: 8px; padding: 6px 2px 5px; display: grid; justify-items: center; gap: 4px; font-size: 10.5px; line-height: 1.15; text-align: center; min-width: 0; }
+.tile:hover { border-color: var(--line); }
+.tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tile canvas { display: block; max-width: 100%; }
+.tile span { overflow-wrap: anywhere; }
+.pats canvas { width: 34px; height: 54px; border-radius: 17px 17px 6px 6px / 22px 22px 6px 6px; }
+.items .tile { padding: 4px 2px; }
+.items canvas { width: 40px; height: 40px; }
+
+.sliders { display: grid; gap: 10px; }
+.sl { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
+.sl label { font-size: 13px; }
+.sl output { font: 12px var(--f-mono); color: var(--muted); }
+.sl input[type=range] { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: var(--accent); }
+details summary { cursor: pointer; font-size: 13px; color: var(--muted); margin: 12px 0 10px; }
+
+/* cores das unhas */
+.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+.slot { display: flex; align-items: center; gap: 8px; background: var(--chip); border: 1px solid transparent; border-radius: 8px; padding: 6px 8px; font-size: 13px; }
+.slot[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.slot:disabled { opacity: .35; cursor: default; }
+.slot i, .swatch-now i, .pal i { position: absolute; inset: 0; border-radius: inherit; }
+.slot b { position: relative; width: 20px; height: 20px; border-radius: 50%; flex: none; border: 1px solid var(--line); background: repeating-conic-gradient(#c8cdcf 0 25%, #fff 0 50%) 0 0 / 8px 8px; }
+.picker { display: grid; gap: 10px; }
+.sv { position: relative; height: 120px; border-radius: 6px; overflow: hidden; touch-action: none; border: 1px solid var(--line); }
+.sv canvas { width: 100%; height: 100%; display: block; }
+.sv > i { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.5); pointer-events: none; }
+.hue, .alpha { width: 100%; height: 14px; margin: 0; border-radius: 7px; appearance: none; -webkit-appearance: none; border: 1px solid var(--line); }
+.hue { background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+.alpha { background: linear-gradient(90deg, rgba(0,0,0,0), var(--acol, #f00)), repeating-conic-gradient(#c8cdcf 0 25%, #fff 0 50%) 0 0 / 10px 10px; }
+.hue::-webkit-slider-thumb, .alpha::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #1d2326; }
+.hue::-moz-range-thumb, .alpha::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid #1d2326; }
+.rgba { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.rgba label { display: grid; gap: 2px; font: 11px var(--f-mono); color: var(--muted); }
+.rgba input { width: 100%; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 6px; font: 13px var(--f-mono); color: var(--fg); }
+.readout { display: flex; align-items: center; gap: 8px; }
+.readout code { flex: 1; min-width: 0; font: 12px var(--f-mono); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; overflow-wrap: anywhere; }
+.swatch-now { width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--line); background: repeating-conic-gradient(#c8cdcf 0 25%, #fff 0 50%) 0 0 / 10px 10px; position: relative; flex: none; }
+.palette { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.pal { aspect-ratio: 1; border-radius: 6px; border: 1px solid var(--line); padding: 0; position: relative; overflow: hidden; background: repeating-conic-gradient(#c8cdcf 0 25%, #fff 0 50%) 0 0 / 8px 8px; }
+.finish-desc { font-size: 13px; margin: 10px 0 0; min-height: 3em; }
+.icol { display: flex; flex-wrap: wrap; gap: 6px; }
+.icol button { width: 26px; height: 26px; border-radius: 50%; padding: 0; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); }
+.icol button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--accent); }
+.btn { background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 6px; padding: 7px 12px; font-weight: 500; }
+.btn.ghost { background: var(--chip); color: var(--fg); }
+.row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+/* tela inicial e modo AR */
+.start { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--bg); padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
+.start-card { width: min(640px, 100%); display: grid; gap: 14px; }
+.start-card h1 { font: 700 clamp(30px, 6vw, 44px)/1 var(--f-display); margin: 0; letter-spacing: -0.02em; }
+.start-card > p { margin: 0; color: var(--muted); }
+.start-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.start-opts button { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 6px; }
+.start-opts button:hover { border-color: var(--accent); }
+.start-opts b { font: 700 20px var(--f-display); }
+.start-opts span { color: var(--muted); font-size: 13px; }
+.start-opts i { font-style: normal; font: 500 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+#ov { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ar-empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); pointer-events: none; }
+.ar-empty div { display: grid; gap: 10px; justify-items: center; max-width: 30ch; }
+.ar-empty img { width: 120px; height: 144px; object-fit: contain; opacity: .9; }
+.grid.tpls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tpls img { width: 100%; max-width: 90px; aspect-ratio: 150 / 180; object-fit: contain; display: block; }
+label.btn { display: inline-block; cursor: pointer; }
+.ar-status { font-size: 13px; margin: 10px 0 0; }
+
+@media (max-width: 860px) {
+  html, body { height: auto; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 60vh auto; height: auto; }
+  .stage { min-height: 360px; }
+  .panel { border-left: 0; border-top: 1px solid var(--line); overflow: visible; padding-left: max(16px, env(safe-area-inset-left, 0px)); }
+  .tabs { top: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<main class="app">
+  <div class="stage" id="stage">
+    <canvas id="gl" aria-label="Mão 3D. Arraste para girar, role para aproximar."></canvas>
+    <canvas id="ov"></canvas>
+    <div class="ar-empty" id="ar-empty" hidden><div><img id="ar-empty-img" alt=""><b>Escolha um modelo e tire uma foto da mão</b><span>Use a aba Foto, ao lado.</span></div></div>
+    <div class="hud top">
+      <div class="chips"><button class="chip" id="switch-mode" type="button">Trocar modo</button></div>
+      <div class="chips" role="group" aria-label="Vista" id="hud3d">
+        <button class="chip" data-view="back" type="button">Dorso</button>
+        <button class="chip" data-view="palm" type="button">Palma</button>
+        <button class="chip" data-view="side" type="button">Lateral</button>
+        <button class="chip" data-view="nails" type="button">Unhas de perto</button>
+        <button class="chip" id="spin" type="button" aria-pressed="false">Girar</button>
+        <button class="chip" id="hand-side" type="button" aria-pressed="false">Mão direita</button>
+      </div>
+    </div>
+    <div class="banner" id="banner" hidden><span id="banner-txt"></span><button type="button" id="banner-stop">Parar</button></div>
+    <div class="hud bot">
+      <div class="stats" id="stats">gerando malha...</div>
+      <div class="hint" id="hint">arraste para girar · role para zoom</div>
+    </div>
+  </div>
+
+  <aside class="panel">
+    <h1>Ateliê de Mãos</h1>
+    <p class="sub">Monte a mão, escolha formato, desenho e acabamento de cada unha e aplique adesivos e pingentes.</p>
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="foto" aria-selected="false" hidden>Foto</button>
+      <button type="button" role="tab" data-tab="mao" aria-selected="true">Mão</button>
+      <button type="button" role="tab" data-tab="unhas" aria-selected="false">Unhas</button>
+      <button type="button" role="tab" data-tab="deco" aria-selected="false">Decoração</button>
+    </nav>
+
+    <div class="tabpane" id="tab-foto" hidden>
+      <section>
+        <h2>1. Modelo da mão <span class="val" id="tpl-val"></span></h2>
+        <div class="grid tpls" id="tpls"></div>
+        <p class="note" id="tpl-tip"></p>
+      </section>
+      <section>
+        <h2>2. Foto</h2>
+        <div class="row" style="margin-top:0">
+          <label class="btn" for="ph-cam">Tirar foto</label><input type="file" id="ph-cam" accept="image/*" capture="environment" hidden>
+          <label class="btn ghost" for="ph-gal">Escolher da galeria</label><input type="file" id="ph-gal" accept="image/*" hidden>
+        </div>
+        <p class="ar-status" id="ar-status">Nenhuma foto ainda. Fotografe com boa luz, a mão inteira na foto e o fundo liso.</p>
+      </section>
+      <section>
+        <h2>3. Ajustar unhas</h2>
+        <div class="chips">
+          <button class="chip" type="button" id="ar-adjust" aria-pressed="true">Mostrar alças de ajuste</button>
+          <button class="chip" type="button" id="ar-redetect">Detectar de novo</button>
+          <button class="chip" type="button" id="ar-tplfit">Posicionar pelo modelo</button>
+        </div>
+        <h2 style="margin-top:14px">Unhas na foto</h2>
+        <div class="chips" id="ar-vis"></div>
+        <div class="sliders" id="ar-sliders" style="margin-top:12px"></div>
+        <p class="note">Toque numa unha para escolhê-la. Arraste o círculo da cutícula, o círculo da ponta e os quadradinhos laterais (largura). Arraste o meio da unha para movê-la. Fora das unhas, arraste para mover a foto; role ou faça pinça para dar zoom.</p>
+      </section>
+    </div>
+
+    <div class="tabpane" id="tab-mao">
+      <section>
+        <h2>Exibição</h2>
+        <div class="seg" id="modes">
+          <button class="chip" type="button" data-mode="skin" aria-pressed="true">Pele</button>
+          <button class="chip" type="button" data-mode="skinwire" aria-pressed="false">Pele + malha</button>
+          <button class="chip" type="button" data-mode="clay" aria-pressed="false">Argila + malha</button>
+          <button class="chip" type="button" data-mode="wire" aria-pressed="false">Só malha</button>
+        </div>
+        <div class="chips" style="margin-top:10px" id="res" role="group" aria-label="Resolução da malha">
+          <button class="chip" type="button" data-cell="0.4" aria-pressed="false">Baixa</button>
+          <button class="chip" type="button" data-cell="0.28" aria-pressed="true">Média</button>
+          <button class="chip" type="button" data-cell="0.2" aria-pressed="false">Alta</button>
+        </div>
+      </section>
+      <section>
+        <h2>Formato da mão <span class="val" id="preset-name">Clássica</span></h2>
+        <div class="chips" id="presets"></div>
+        <div class="chips" style="margin-top:8px"><button class="chip" type="button" id="random">Sortear variação</button></div>
+        <details>
+          <summary>Ajuste fino</summary>
+          <div class="sliders" id="shape-sliders"></div>
+        </details>
+      </section>
+      <section>
+        <h2>Pose</h2>
+        <div class="chips" id="poses"></div>
+        <div class="sliders" id="pose-sliders" style="margin-top:12px"></div>
+      </section>
+      <section>
+        <h2>Tom de pele <span class="val" id="tone-val">Tom 4</span></h2>
+        <div class="tones" id="tones"></div>
+        <div class="tone-name" id="tone-name"></div>
+      </section>
+    </div>
+
+    <div class="tabpane" id="tab-unhas" hidden>
+      <section>
+        <h2>Formato da unha <span class="val" id="nshape-val"></span></h2>
+        <div class="grid shapes" id="nshapes"></div>
+        <div class="sliders" style="margin-top:12px" id="nlen-host"></div>
+        <p class="note">O formato vale para todas as unhas. Desenho, cores e acabamento podem ser escolhidos por unha.</p>
+      </section>
+      <section>
+        <h2>Aplicar em</h2>
+        <div class="chips" id="nail-targets" role="group" aria-label="Unha a pintar"></div>
+      </section>
+      <section>
+        <h2>Desenho <span class="val" id="pat-val"></span></h2>
+        <div class="grid pats" id="pats"></div>
+      </section>
+      <section>
+        <h2>Cores <span class="val" id="nail-val"></span></h2>
+        <div class="slots" id="slots"></div>
+        <div class="picker">
+          <div class="sv" id="sv"><canvas id="sv-canvas" width="240" height="120"></canvas><i id="sv-dot"></i></div>
+          <input class="hue" id="hue" type="range" min="0" max="360" step="1" value="0" aria-label="Matiz">
+          <input class="alpha" id="alpha" type="range" min="0" max="100" step="1" value="100" aria-label="Opacidade">
+          <div class="rgba">
+            <label>R<input id="in-r" type="number" min="0" max="255" value="0"></label>
+            <label>G<input id="in-g" type="number" min="0" max="255" value="0"></label>
+            <label>B<input id="in-b" type="number" min="0" max="255" value="0"></label>
+            <label>A<input id="in-a" type="number" min="0" max="1" step="0.01" value="1"></label>
+          </div>
+          <div class="readout">
+            <span class="swatch-now"><i id="swatch-now"></i></span>
+            <code id="rgba-text">rgba(0, 0, 0, 1)</code>
+            <button class="btn ghost" type="button" id="copy">Copiar</button>
+          </div>
+          <div class="palette" id="palette" aria-label="Paleta de esmaltes"></div>
+        </div>
+      </section>
+      <section>
+        <h2>Acabamento <span class="val" id="fin-val"></span></h2>
+        <div class="chips" id="finishes"></div>
+        <p class="finish-desc" id="fin-desc"></p>
+      </section>
+    </div>
+
+    <div class="tabpane" id="tab-deco" hidden>
+      <section>
+        <p class="note" style="margin:0 0 10px">Escolha um item e toque numa unha para colocar. Dá para pôr vários na mesma unha. Arraste um item já colocado para movê-lo.</p>
+        <div class="chips"><button class="chip" type="button" id="go-nails">Ver unhas de perto</button></div>
+      </section>
+      <section>
+        <h2>Adesivos <span class="val">16</span></h2>
+        <div class="grid items" id="adesivos"></div>
+      </section>
+      <section>
+        <h2>Pingentes e pedrarias <span class="val">14</span></h2>
+        <div class="grid items" id="pingentes"></div>
+      </section>
+      <section>
+        <h2>Cor do item <span class="val" id="icol-val"></span></h2>
+        <div class="icol" id="icol"></div>
+        <p class="note">Vale para o próximo item e para o item selecionado.</p>
+      </section>
+      <section>
+        <h2>Item selecionado <span class="val" id="sel-val">nenhum</span></h2>
+        <div class="sliders" id="sel-sliders"></div>
+        <div class="row">
+          <button class="btn ghost" type="button" id="sel-dup">Duplicar</button>
+          <button class="btn ghost" type="button" id="sel-del">Remover</button>
+          <button class="btn ghost" type="button" id="all-del">Remover todos</button>
+        </div>
+        <p class="note" id="deco-count">Nenhum item na mão.</p>
+      </section>
+    </div>
+  </aside>
+</main>
+
+<div class="start" id="start">
+  <div class="start-card">
+    <h1>Ateliê de Mãos</h1>
+    <p>Como você quer começar? Dá para trocar depois pelo botão "Trocar modo".</p>
+    <div class="start-opts">
+      <button type="button" id="go-3d"><i>Modo 3D</i><b>Mão em 3D</b><span>Monte uma mão 3D, escolha a pose e decore as unhas girando à vontade.</span></button>
+      <button type="button" id="go-ar"><i>Modo AR</i><b>Foto da sua mão</b><span>Escolha uma pose, tire uma foto da mão e decore as unhas de verdade na imagem.</span></button>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ===== Geometria da mão: esqueleto (FK) -> campo de distância -> malha de quads ===== */
+const DEDOS = ['Polegar', 'Indicador', 'Médio', 'Anelar', 'Mindinho'];
+const rad = d => d * Math.PI / 180;
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const len3 = (x, y, z) => Math.sqrt(x * x + y * y + z * z);
+const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+function smin(a, b, k) {
+  const h = Math.max(k - Math.abs(a - b), 0) / k;
+  return Math.min(a, b) - h * h * k * 0.25;
+}
+
+const _R = new THREE.Matrix4();
+const _V = new THREE.Vector3();
+
+/* Cadeia de 3 segmentos. yaw: graus para o lado do polegar (+X); tilt: para a palma (-Z); roll: giro no próprio eixo. */
+function chainFK(base, yaw, tilt, roll, curls, lens) {
+  const M = new THREE.Matrix4().makeTranslation(base[0], base[1], base[2]);
+  M.multiply(_R.makeRotationZ(-rad(yaw)));
+  M.multiply(_R.makeRotationX(-rad(tilt)));
+  if (roll) M.multiply(_R.makeRotationY(rad(roll)));
+  const pts = [base.slice()];
+  for (let i = 0; i < 3; i++) {
+    M.multiply(_R.makeRotationX(-rad(curls[i])));
+    M.multiply(_R.makeTranslation(0, lens[i], 0));
+    _V.setFromMatrixPosition(M);
+    pts.push([_V.x, _V.y, _V.z]);
+  }
+  const e = M.elements;
+  return { pts, dir: [e[4], e[5], e[6]], dorsal: [e[8], e[9], e[10]] };
+}
+
+/* quadros-chave de pose: [yaw, tilt, roll, curva1, curva2, curva3] */
+var POSE_CFG = {
+  fingerFist: [75, 91, 80],
+  thumbOpen0: [40, 2, 48, 2, 16, 26], thumbOpen1: [54, -5, 42, 2, 4, 14],
+  thumbMid: [38, 34, 55, 6, 22, 28], thumbFist: [22, 42, 75, 1, 5, 36], midAt: 0.55,
+};
+function buildSkeleton(S, P) {
+  const c = P.curl, o = P.thumbOut;
+  const xs = [0.37, 0.12, -0.13, -0.37].map(k => k * S.palmW);
+  const ys = [-0.15, 0.3, 0, -0.75].map(v => S.palmL - 1.0 + v);
+  const fan = [9, 1, -7, -17];
+  const baseLens = [[4.4, 2.6, 2.2], [4.8, 3.0, 2.3], [4.5, 2.8, 2.2], [3.6, 2.0, 2.0]];
+  const rb = [0.88, 0.93, 0.85, 0.73];
+  const casc = [0.85, 0.95, 1.05, 1.15];
+  const rollF = [0, -3, -7, -12];
+  const fingers = [];
+
+  // polegar: metacarpo nasce perto do pulso; pose por quadros-chave (aberta -> meio -> punho)
+  {
+    const lens = [4.0, 3.0, 2.5].map(l => l * S.thumb);
+    const k = S.thumb * (0.5 + 0.5 * S.fingerR) * (1 + 0.1 * S.flesh);
+    const radii = [1.35, 1.08, 0.98, 0.9].map(r => r * k);
+    const C = POSE_CFG, A = C.thumbOpen0, B = C.thumbOpen1;
+    const kf = (f) => { const op = lerp(f(A), f(B), o); return c < C.midAt ? lerp(op, f(C.thumbMid), c / C.midAt) : lerp(f(C.thumbMid), f(C.thumbFist), (c - C.midAt) / (1 - C.midAt)); };
+    const ch = chainFK([S.palmW * 0.30, 0.9, -0.7], kf(q => q[0]), kf(q => q[1]), kf(q => q[2]), [kf(q => q[3]), kf(q => q[4]), kf(q => q[5])], lens);
+    fingers.push({ ...ch, lens, radii });
+  }
+  for (let i = 0; i < 4; i++) {
+    const cc = clamp(c * casc[i], 0, 1);
+    const lens = baseLens[i].map(l => l * S.fingerLen);
+    const r0 = rb[i] * S.fingerR * (1 + 0.12 * S.flesh);
+    const radii = [r0 * 1.05, r0 * 0.93, r0 * 0.84, r0 * (0.84 - 0.28 * S.taper)];
+    const FF = POSE_CFG.fingerFist, curls = [lerp(-4, FF[0], cc), lerp(3, FF[1], cc), lerp(2, FF[2], cc)];
+    const ch = chainFK([xs[i], ys[i], 0], fan[i] * P.spread, 0, rollF[i], curls, lens);
+    fingers.push({ ...ch, lens, radii });
+  }
+  return { fingers, xs, ys };
+}
+
+function ell(x, y, z, rx, ry, rz) {
+  const k0 = len3(x / rx, y / ry, z / rz);
+  const k1 = len3(x / (rx * rx), y / (ry * ry), z / (rz * rz));
+  return k1 < 1e-9 ? -Math.min(rx, ry, rz) : k0 * (k0 - 1) / k1;
+}
+
+function buildField(S, P, sk) {
+  const hz = 1.25 + 0.5 * S.flesh;
+  const pHX = S.palmW / 2, wHX = S.wrist / 2 + 0.6;
+  const cy = S.palmL / 2, hy = S.palmL / 2;
+  const wHZ = 1.55 + 0.35 * S.flesh, wR = Math.min(S.wrist / 2, wHZ) - 0.05;
+  const wCY = -4, wHY = 5.2;
+  const palmL = S.palmL;
+  const R = 1.5;
+  const th = [S.palmW * 0.29, 3.2, -0.6, 2.1 * (0.85 + 0.25 * S.flesh), 3.0, 1.45];
+  const hp = [-S.palmW * 0.33, 4.2, -0.3, 1.7 * (0.9 + 0.2 * S.flesh), 3.2, 1.25];
+  const kr = 0.55 + 0.45 * S.knuckle;
+  const knuckles = [];
+  for (let i = 0; i < 4; i++) knuckles.push([sk.xs[i], sk.ys[i] - 0.9, hz - 0.5]);
+  const rt = S.tendon > 0.02 ? 0.12 + 0.42 * S.tendon : 0;
+  const tendons = [];
+  if (rt > 0) for (let i = 0; i < 4; i++) tendons.push([sk.xs[i] * 0.5, 0.6, hz - 0.15, sk.xs[i], sk.ys[i] - 0.9, hz - 0.3]);
+
+  const groups = [];
+  const mn = [-S.palmW / 2 - 2.5, -9.6, -hz - 2.5];
+  const mx = [S.palmW / 2 + 2.5, S.palmL + 1, hz + 2.5];
+  for (const fg of sk.fingers) {
+    const segs = [];
+    const box = [1e9, 1e9, 1e9, -1e9, -1e9, -1e9];
+    for (let s = 0; s < 3; s++) {
+      const a = fg.pts[s], b = fg.pts[s + 1];
+      const bx = b[0] - a[0], by = b[1] - a[1], bz = b[2] - a[2];
+      segs.push([a[0], a[1], a[2], bx, by, bz, 1 / (bx * bx + by * by + bz * bz), fg.radii[s], fg.radii[s + 1]]);
+    }
+    const rmax = Math.max(...fg.radii) + 1.5;
+    for (const p of fg.pts) for (let k = 0; k < 3; k++) {
+      box[k] = Math.min(box[k], p[k] - rmax); box[k + 3] = Math.max(box[k + 3], p[k] + rmax);
+      mn[k] = Math.min(mn[k], p[k] - rmax); mx[k] = Math.max(mx[k], p[k] + rmax);
+    }
+    groups.push({ segs, box });
+  }
+
+  function f(x, y, z) {
+    const t = clamp(y / (palmL * 0.8), 0, 1), sm = t * t * (3 - 2 * t);
+    const hx = wHX + (pHX - wHX) * sm;
+    let qx = Math.abs(x) - (hx - R), qy = Math.abs(y - cy) - (hy - R), qz = Math.abs(z) - (hz - R);
+    let d = Math.sqrt(Math.max(qx, 0) ** 2 + Math.max(qy, 0) ** 2 + Math.max(qz, 0) ** 2) + Math.min(Math.max(qx, qy, qz), 0) - R;
+    qx = Math.abs(x) - (S.wrist / 2 - wR); qy = Math.abs(y - wCY) - (wHY - wR); qz = Math.abs(z) - (wHZ - wR);
+    const dw = Math.sqrt(Math.max(qx, 0) ** 2 + Math.max(qy, 0) ** 2 + Math.max(qz, 0) ** 2) + Math.min(Math.max(qx, qy, qz), 0) - wR;
+    d = smin(d, dw, 1.6);
+    d = smin(d, ell(x - th[0], y - th[1], z - th[2], th[3], th[4], th[5]), 1.3);
+    d = smin(d, ell(x - hp[0], y - hp[1], z - hp[2], hp[3], hp[4], hp[5]), 1.3);
+    for (let i = 0; i < 4; i++) {
+      const k = knuckles[i];
+      d = smin(d, len3(x - k[0], y - k[1], z - k[2]) - kr, 0.5);
+    }
+    for (let i = 0; i < tendons.length; i++) {
+      const T = tendons[i];
+      const bax = T[3] - T[0], bay = T[4] - T[1], baz = T[5] - T[2];
+      const pax = x - T[0], pay = y - T[1], paz = z - T[2];
+      const h = clamp((pax * bax + pay * bay + paz * baz) / (bax * bax + bay * bay + baz * baz), 0, 1);
+      d = smin(d, len3(pax - bax * h, pay - bay * h, paz - baz * h) - rt, 0.5);
+    }
+    for (let g = 0; g < groups.length; g++) {
+      const G = groups[g], b = G.box;
+      if (x < b[0] || x > b[3] || y < b[1] || y > b[4] || z < b[2] || z > b[5]) continue;
+      let dg = 1e9;
+      for (let s = 0; s < 3; s++) {
+        const q = G.segs[s];
+        const pax = x - q[0], pay = y - q[1], paz = z - q[2];
+        const h = clamp((pax * q[3] + pay * q[4] + paz * q[5]) * q[6], 0, 1);
+        const dd = len3(pax - q[3] * h, pay - q[4] * h, paz - q[5] * h) - (q[7] + (q[8] - q[7]) * h);
+        dg = smin(dg, dd, 0.35);
+      }
+      d = smin(d, dg, g === 0 ? 0.9 : 0.55);
+    }
+    return Math.max(d, -9 - y);
+  }
+  return { f, bmin: mn, bmax: mx, knuckles };
+}
+
+/* Surface nets + suavização (Laplace) reprojetada na superfície -> quads mais regulares */
+function surfaceNets(f, bmin, bmax, h) {
+  const nx = Math.ceil((bmax[0] - bmin[0]) / h) + 1;
+  const ny = Math.ceil((bmax[1] - bmin[1]) / h) + 1;
+  const nz = Math.ceil((bmax[2] - bmin[2]) / h) + 1;
+  const vals = new Float32Array(nx * ny * nz);
+  for (let k = 0; k < nz; k++) {
+    const z = bmin[2] + k * h;
+    for (let j = 0; j < ny; j++) {
+      const y = bmin[1] + j * h;
+      let o = nx * (j + ny * k);
+      for (let i = 0; i < nx; i++) vals[o++] = f(bmin[0] + i * h, y, z);
+    }
+  }
+  const cx = nx - 1, cy = ny - 1, cz = nz - 1;
+  const cellV = new Int32Array(cx * cy * cz).fill(-1);
+  const CO = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]];
+  const ED = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+  const verts = [];
+  const v = new Float32Array(8);
+  for (let k = 0; k < cz; k++) for (let j = 0; j < cy; j++) for (let i = 0; i < cx; i++) {
+    let mask = 0;
+    for (let c = 0; c < 8; c++) {
+      const val = vals[(i + CO[c][0]) + nx * ((j + CO[c][1]) + ny * (k + CO[c][2]))];
+      v[c] = val;
+      if (val < 0) mask |= 1 << c;
+    }
+    if (mask === 0 || mask === 255) continue;
+    let sx = 0, sy = 0, sz = 0, n = 0;
+    for (let e = 0; e < 12; e++) {
+      const a = ED[e][0], b = ED[e][1];
+      if ((v[a] < 0) !== (v[b] < 0)) {
+        const t = v[a] / (v[a] - v[b]);
+        sx += CO[a][0] + t * (CO[b][0] - CO[a][0]);
+        sy += CO[a][1] + t * (CO[b][1] - CO[a][1]);
+        sz += CO[a][2] + t * (CO[b][2] - CO[a][2]);
+        n++;
+      }
+    }
+    cellV[i + cx * (j + cy * k)] = verts.length / 3;
+    verts.push(bmin[0] + (i + sx / n) * h, bmin[1] + (j + sy / n) * h, bmin[2] + (k + sz / n) * h);
+  }
+  const quads = [];
+  const cv = (i, j, k) => cellV[i + cx * (j + cy * k)];
+  const push = (a, b, c, d, rev) => { if (a >= 0 && b >= 0 && c >= 0 && d >= 0) { if (rev) quads.push(a, d, c, b); else quads.push(a, b, c, d); } };
+  const at = (i, j, k) => vals[i + nx * (j + ny * k)] < 0;
+  for (let k = 1; k < nz - 1; k++) for (let j = 1; j < ny - 1; j++) for (let i = 1; i < nx - 1; i++) {
+    const s = at(i, j, k);
+    if (s !== at(i + 1, j, k) && i < cx) push(cv(i, j - 1, k - 1), cv(i, j, k - 1), cv(i, j, k), cv(i, j - 1, k), !s);
+    if (s !== at(i, j + 1, k) && j < cy) push(cv(i - 1, j, k - 1), cv(i, j, k - 1), cv(i, j, k), cv(i - 1, j, k), s);
+    if (s !== at(i, j, k + 1) && k < cz) push(cv(i - 1, j - 1, k), cv(i, j - 1, k), cv(i, j, k), cv(i - 1, j, k), !s);
+  }
+
+  const nv = verts.length / 3;
+  const pos = new Float32Array(verts);
+  const nor = new Float32Array(nv * 3);
+
+  // arestas dos quads + vizinhança
+  const edgeSet = new Set();
+  const edges = [];
+  const addEdge = (a, b) => {
+    const key = a < b ? a * nv + b : b * nv + a;
+    if (!edgeSet.has(key)) { edgeSet.add(key); edges.push(a, b); }
+  };
+  for (let q = 0; q < quads.length; q += 4) {
+    addEdge(quads[q], quads[q + 1]); addEdge(quads[q + 1], quads[q + 2]);
+    addEdge(quads[q + 2], quads[q + 3]); addEdge(quads[q + 3], quads[q]);
+  }
+  const deg = new Uint32Array(nv + 1);
+  for (let e = 0; e < edges.length; e++) deg[edges[e] + 1]++;
+  for (let i = 0; i < nv; i++) deg[i + 1] += deg[i];
+  const fillp = deg.slice(0, nv);
+  const nb = new Uint32Array(edges.length);
+  for (let e = 0; e < edges.length; e += 2) { nb[fillp[edges[e]]++] = edges[e + 1]; nb[fillp[edges[e + 1]]++] = edges[e]; }
+
+  const eps = 0.03;
+  const project = (i, maxd, writeN) => {
+    const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
+    let gx = f(x + eps, y, z) - f(x - eps, y, z);
+    let gy = f(x, y + eps, z) - f(x, y - eps, z);
+    let gz = f(x, y, z + eps) - f(x, y, z - eps);
+    const l = len3(gx, gy, gz) || 1;
+    gx /= l; gy /= l; gz /= l;
+    const d = clamp(f(x, y, z), -maxd, maxd);
+    pos[i * 3] = x - d * gx; pos[i * 3 + 1] = y - d * gy; pos[i * 3 + 2] = z - d * gz;
+    if (writeN) { nor[i * 3] = gx; nor[i * 3 + 1] = gy; nor[i * 3 + 2] = gz; }
+  };
+  for (let i = 0; i < nv; i++) project(i, 0.5 * h, false);
+  const tmp = new Float32Array(nv * 3);
+  for (let it = 0; it < 2; it++) {
+    for (let i = 0; i < nv; i++) {
+      const a = deg[i], b = deg[i + 1];
+      if (b === a) { tmp[i * 3] = pos[i * 3]; tmp[i * 3 + 1] = pos[i * 3 + 1]; tmp[i * 3 + 2] = pos[i * 3 + 2]; continue; }
+      let sx = 0, sy = 0, sz = 0;
+      for (let k = a; k < b; k++) { const j = nb[k]; sx += pos[j * 3]; sy += pos[j * 3 + 1]; sz += pos[j * 3 + 2]; }
+      const n = b - a;
+      tmp[i * 3] = lerp(pos[i * 3], sx / n, 0.5);
+      tmp[i * 3 + 1] = lerp(pos[i * 3 + 1], sy / n, 0.5);
+      tmp[i * 3 + 2] = lerp(pos[i * 3 + 2], sz / n, 0.5);
+    }
+    pos.set(tmp);
+    for (let i = 0; i < nv; i++) project(i, h, it === 1);
+  }
+
+  const tris = [];
+  const P = (i, c) => pos[i * 3 + c];
+  for (let q = 0; q < quads.length; q += 4) {
+    const a = quads[q], b = quads[q + 1], c = quads[q + 2], d = quads[q + 3];
+    const dAC = len3(P(a, 0) - P(c, 0), P(a, 1) - P(c, 1), P(a, 2) - P(c, 2));
+    const dBD = len3(P(b, 0) - P(d, 0), P(b, 1) - P(d, 1), P(b, 2) - P(d, 2));
+    if (dAC <= dBD) tris.push(a, b, c, a, c, d); else tris.push(a, b, d, b, c, d);
+  }
+  return { pos, nor, tris: new Uint32Array(tris), edges: new Uint32Array(edges), nv, nq: quads.length / 4 };
+}
+
+/* Pesos de cor por vértice: palma mais clara, pontas dos dedos e nós mais rosados */
+function skinWeights(m, sk, knuckles) {
+  const wp = new Float32Array(m.nv), wr = new Float32Array(m.nv);
+  const tips = sk.fingers.map(fg => [fg.pts[3], fg.radii[3] * 1.7]);
+  const joints = [];
+  sk.fingers.forEach((fg, i) => { if (i > 0) { joints.push([fg.pts[1], fg.radii[1] * 0.9]); joints.push([fg.pts[2], fg.radii[2] * 0.8]); } });
+  knuckles.forEach(k => joints.push([k, 1.0]));
+  for (let i = 0; i < m.nv; i++) {
+    const x = m.pos[i * 3], y = m.pos[i * 3 + 1], z = m.pos[i * 3 + 2], nz = m.nor[i * 3 + 2];
+    wp[i] = sstep(0.1, -0.65, nz) * sstep(-8, -5, y);
+    let r = 0;
+    for (const [p, s] of tips) { const d = len3(x - p[0], y - p[1], z - p[2]) / s; r += Math.exp(-d * d); }
+    const dorsal = Math.max(0, nz);
+    for (const [p, s] of joints) { const d = len3(x - p[0], y - p[1], z - p[2]) / s; r += 0.55 * dorsal * Math.exp(-d * d); }
+    wr[i] = Math.min(1, r);
+  }
+  return { wp, wr };
+}
+
+/* ===== Unhas: 15 formatos. f(t) devolve [meia-largura esq, dir] da borda livre, t = 0..1 ===== */
+const rndc = (t, r, rw) => (t < 1 - r ? 1 : 1 - rw + rw * Math.sqrt(Math.max(0, 1 - ((t - (1 - r)) / r) ** 2)));
+const sym = g => t => { const v = Math.max(0, g(t)); return [v, v]; };
+const NAIL_SHAPES = [
+  { name: 'Redondo', ext: 0.55, f: sym(t => Math.sqrt(1 - t * t)) },
+  { name: 'Ovalada', ext: 0.95, f: sym(t => (1 - 0.12 * t) * Math.sqrt(Math.max(0, 1 - t ** 2.2))) },
+  { name: 'Quadrado', ext: 0.7, f: sym(t => rndc(t, 0.06, 0.1)) },
+  { name: 'Quadrado oval', ext: 0.75, f: sym(t => (1 - 0.06 * t) * rndc(t, 0.3, 0.35)) },
+  { name: 'Quadrado arredondado', ext: 0.7, f: sym(t => rndc(t, 0.5, 0.6)) },
+  { name: 'Amêndoa', ext: 1.15, f: sym(t => (1 - 0.5 * t) * Math.sqrt(Math.max(0, 1 - t ** 2.4))) },
+  { name: 'Amêndoa russa', ext: 0.8, f: sym(t => (1 - 0.35 * t) * Math.sqrt(Math.max(0, 1 - t ** 2.6))) },
+  { name: 'Caixão', ext: 1.25, f: sym(t => (1 - 0.42 * t) * rndc(t, 0.05, 0.12)) },
+  { name: 'Estilete', ext: 1.55, f: sym(t => Math.pow(1 - t, 0.85)) },
+  { name: 'Batom', ext: 1.05, f: t => { const l = 1 - 0.1 * t; return [l, t < 0.45 ? l : l * (1 - 2 * (t - 0.45) / 0.55)]; } },
+  { name: 'Ponta de flecha', ext: 0.95, f: sym(t => (t < 0.3 ? 1 - 0.1 * t : (0.97) * (1 - (t - 0.3) / 0.7))) },
+  { name: 'Pico de montanha', ext: 1.15, f: sym(t => (t < 0.15 ? 1 : Math.pow(1 - (t - 0.15) / 0.85, 1.7))) },
+  { name: 'Aresta', ext: 1.25, f: sym(t => Math.pow(1 - t, 0.9)), ridge: 0.22, cc: 1.15 },
+  { name: 'Tubo', ext: 0.95, f: sym(t => rndc(t, 0.08, 0.12)), cc: 1.75 },
+  { name: 'Leque', ext: 1.0, f: sym(t => (1 + 0.5 * t ** 1.3) * rndc(t, 0.06, 0.1)) },
+];
+const NAIL_LIFT = 0.07, NAIL_TH = 0.06;
+function nailHW(shape, W, Lf, ext) {
+  const vc = Math.min(0.55 * W, Lf * 0.5);
+  return v => {
+    if (v <= Lf) { const g = v < vc ? Math.sqrt(Math.max(0.0025, 1 - (1 - v / vc) ** 2)) : 1; return [W * g, W * g]; }
+    const a = shape.f(Math.min(1, (v - Lf) / ext));
+    return [W * a[0], W * a[1]];
+  };
+}
+
+function nailModel(fg, isThumb, shape, lenScale, base = 0.5) {
+  const P0 = fg.pts[2], L = fg.lens[2], r2 = fg.radii[2], r3 = fg.radii[3];
+  const dir = fg.dir, dor = fg.dorsal;
+  const side = [dor[1] * dir[2] - dor[2] * dir[1], dor[2] * dir[0] - dor[0] * dir[2], dor[0] * dir[1] - dor[1] * dir[0]];
+  const s0 = L * base, Lf = L - s0;
+  const W = (isThumb ? 0.9 : 0.8) * (r3 + NAIL_LIFT);
+  const ext = Math.max(0.05, shape.ext * lenScale * W * 1.6);
+  const vmax = Lf + ext;
+  const cc = shape.cc || 1, ridge = shape.ridge || 0, droop = 0.05;
+  const hw = nailHW(shape, W, Lf, ext);
+  const point = (x, v, lift, out) => {
+    const a = s0 + v;
+    let rho, dr = 0, k = 1, rh = 0;
+    if (a <= L) rho = lerp(r2, r3, a / L) + lift;
+    else {
+      const e = a - L;
+      rho = r3 + lift; dr = droop * e * e;
+      const ramp = sstep(0, 0.45 * ext, e);
+      k = 1 + (cc - 1) * ramp;
+      if (ridge) rh = ridge * ramp * Math.max(0, 1 - Math.abs(x) / W);
+    }
+    const rc = rho / k, ang = clamp(x / rc, -1.6, 1.6);
+    const radial = rc * Math.cos(ang) + (rho - rc) - dr + rh, lat = rc * Math.sin(ang);
+    out[0] = P0[0] + dir[0] * a + dor[0] * radial + side[0] * lat;
+    out[1] = P0[1] + dir[1] * a + dor[1] * radial + side[1] * lat;
+    out[2] = P0[2] + dir[2] * a + dor[2] * radial + side[2] * lat;
+    return out;
+  };
+  const fromUV = (u, vv) => { const v = (1 - vv) * vmax; const [l, r] = hw(v); return [lerp(-l, r, u), v]; };
+  const A = [0, 0, 0], B = [0, 0, 0], C = [0, 0, 0], D = [0, 0, 0];
+  // referencial na superfície: posição, normal (para fora), tangente (para a ponta)
+  const frame = (x, v, lift) => {
+    const p = point(x, v, lift, [0, 0, 0]);
+    point(x, v + 0.02, lift, A); point(x, v - 0.02, lift, B);
+    point(x + 0.02, v, lift, C); point(x - 0.02, v, lift, D);
+    const tv = new THREE.Vector3(A[0] - B[0], A[1] - B[1], A[2] - B[2]).normalize();
+    const tx = new THREE.Vector3(C[0] - D[0], C[1] - D[1], C[2] - D[2]).normalize();
+    const n = new THREE.Vector3().crossVectors(tx, tv).normalize();
+    if (n.x * dor[0] + n.y * dor[1] + n.z * dor[2] < 0) n.negate();
+    return { p: new THREE.Vector3(p[0], p[1], p[2]), n, t: tv };
+  };
+  return { Lf, ext, vmax, W, hw, point, fromUV, frame, top: NAIL_LIFT + NAIL_TH };
+}
+
+/* Placa da unha com espessura: face de cima, face de baixo e borda */
+function nailGeometry(m, nu = 18, nF = 14) {
+  const nE = Math.max(6, Math.round(m.ext / (m.Lf / nF)));
+  const vs = [];
+  for (let i = 0; i <= nF; i++) vs.push(m.Lf * i / nF);
+  for (let j = 1; j <= nE; j++) vs.push(m.Lf + m.ext * j / nE);
+  const R = vs.length, cols = nu + 1, half = R * cols;
+  const pos = new Float32Array(half * 2 * 3), uv = new Float32Array(half * 2 * 2);
+  const o = [0, 0, 0];
+  for (let r = 0; r < R; r++) {
+    const v = vs[r], [l, rr] = m.hw(v);
+    for (let c = 0; c < cols; c++) {
+      const u = c / nu, x = lerp(-l, rr, u), i = r * cols + c;
+      m.point(x, v, m.top, o); pos.set(o, i * 3);
+      m.point(x, v, NAIL_LIFT, o); pos.set(o, (i + half) * 3);
+      uv[i * 2] = uv[(i + half) * 2] = u;
+      uv[i * 2 + 1] = uv[(i + half) * 2 + 1] = 1 - v / m.vmax;
+    }
+  }
+  const idx = [];
+  for (let r = 0; r < R - 1; r++) for (let c = 0; c < nu; c++) {
+    const a = r * cols + c, b = a + 1, d = a + cols, e = d + 1;
+    idx.push(a, b, d, b, e, d);
+    idx.push(a + half, d + half, b + half, b + half, d + half, e + half);
+  }
+  const loop = [];
+  for (let c = 0; c < cols; c++) loop.push(c);
+  for (let r = 1; r < R; r++) loop.push(r * cols + nu);
+  for (let c = nu - 1; c >= 0; c--) loop.push((R - 1) * cols + c);
+  for (let r = R - 2; r >= 1; r--) loop.push(r * cols);
+  for (let k = 0; k < loop.length; k++) {
+    const p = loop[k], q = loop[(k + 1) % loop.length];
+    idx.push(p, p + half, q, q, p + half, q + half);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+/* Unha "plana" para o modo AR: eixo base->ponta na foto (pixels), curvatura simulada em z */
+function flatNailModel(spec, shape, lenScale) {
+  const bx = spec.b[0], by = spec.b[1];
+  let dx = spec.t[0] - bx, dy = spec.t[1] - by;
+  const Lf = Math.max(1, Math.hypot(dx, dy)); dx /= Lf; dy /= Lf;
+  const px = -dy, py = dx;
+  const W = Math.max(2, spec.w / 2), unit = W / 0.6;
+  const ext = Math.max(0.05 * unit, shape.ext * lenScale * W * 1.6), vmax = Lf + ext;
+  const hw = nailHW(shape, W, Lf, ext);
+  const R = W * 1.3, cc = shape.cc || 1, ridge = (shape.ridge || 0) * unit;
+  const point = (x, v, lift, out) => {
+    let k = 1, rh = 0, dr = 0;
+    if (v > Lf) {
+      const e = v - Lf, ramp = sstep(0, 0.45 * ext, e);
+      k = 1 + (cc - 1) * ramp; dr = 0.05 * e * e / unit;
+      if (ridge) rh = ridge * ramp * Math.max(0, 1 - Math.abs(x) / W);
+    }
+    const rc = R / k, ang = clamp(x / rc, -1.5, 1.5);
+    const lat = rc * Math.sin(ang);
+    out[0] = bx + dx * v + px * lat; out[1] = by + dy * v + py * lat;
+    out[2] = rc * Math.cos(ang) - rc - dr + rh + lift * unit;
+    return out;
+  };
+  const fromUV = (u, vv) => { const v = (1 - vv) * vmax; const [l, r] = hw(v); return [lerp(-l, r, u), v]; };
+  const A = [0, 0, 0], B = [0, 0, 0], C = [0, 0, 0], D = [0, 0, 0], e = 0.02 * unit;
+  const frame = (x, v, lift) => {
+    const p = point(x, v, lift, [0, 0, 0]);
+    point(x, v + e, lift, A); point(x, v - e, lift, B); point(x + e, v, lift, C); point(x - e, v, lift, D);
+    const tv = new THREE.Vector3(A[0] - B[0], A[1] - B[1], A[2] - B[2]).normalize();
+    const tx = new THREE.Vector3(C[0] - D[0], C[1] - D[1], C[2] - D[2]).normalize();
+    const n = new THREE.Vector3().crossVectors(tx, tv).normalize();
+    if (n.z < 0) n.negate();
+    return { p: new THREE.Vector3(p[0], p[1], p[2]), n, t: tv };
+  };
+  return { Lf, ext, vmax, W, hw, point, fromUV, frame, top: NAIL_LIFT + NAIL_TH, unit };
+}
+
+function buildHand(S, P, h) {
+  const sk = buildSkeleton(S, P);
+  const F = buildField(S, P, sk);
+  const m = surfaceNets(F.f, F.bmin, F.bmax, h);
+  m.sk = sk;
+  Object.assign(m, skinWeights(m, sk, F.knuckles));
+  return m;
+}
+
+/* ===== Desenhos, acabamentos, adesivos e pingentes ===== */
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* caminhos em coordenadas unitárias (-1..1, y para baixo) */
+function pHeart(g, x, y, s) {
+  g.moveTo(x, y - 0.35 * s);
+  g.bezierCurveTo(x, y - 0.8 * s, x - s, y - 0.8 * s, x - s, y - 0.25 * s);
+  g.bezierCurveTo(x - s, y + 0.25 * s, x - 0.35 * s, y + 0.55 * s, x, y + 0.9 * s);
+  g.bezierCurveTo(x + 0.35 * s, y + 0.55 * s, x + s, y + 0.25 * s, x + s, y - 0.25 * s);
+  g.bezierCurveTo(x + s, y - 0.8 * s, x, y - 0.8 * s, x, y - 0.35 * s);
+  g.closePath();
+}
+function pStar(g, x, y, R, r, n = 5, rot = -Math.PI / 2) {
+  for (let i = 0; i < n * 2; i++) {
+    const a = rot + i * Math.PI / n, q = i % 2 ? r : R;
+    i ? g.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q) : g.moveTo(x + Math.cos(a) * q, y + Math.sin(a) * q);
+  }
+  g.closePath();
+}
+function pCirc(g, x, y, r) { g.moveTo(x + r, y); g.arc(x, y, r, 0, Math.PI * 2); }
+
+/* ---------- 20 desenhos (até 3 cores). y=0 é a ponta da unha; F = início da borda livre ---------- */
+const PATTERNS = [
+  { name: 'Liso', uses: 1, draw(g, w, h, C) { g.fillStyle = C[0]; g.fillRect(0, 0, w, h); } },
+  { name: 'Francesinha', uses: 3, draw(g, w, h, C, F) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    const y = Math.max(F, 0.14 * h);
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(w, 0); g.lineTo(w, y + 0.1 * h); g.quadraticCurveTo(w / 2, y - 0.1 * h, 0, y + 0.1 * h); g.closePath();
+    g.fillStyle = C[1]; g.fill();
+    g.beginPath(); g.moveTo(w, y + 0.1 * h); g.quadraticCurveTo(w / 2, y - 0.1 * h, 0, y + 0.1 * h);
+    g.strokeStyle = C[2]; g.lineWidth = w * 0.035; g.stroke();
+  } },
+  { name: 'Francesinha em V', uses: 3, draw(g, w, h, C, F) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    const y = Math.max(F, 0.14 * h);
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(w, 0); g.lineTo(w, y + 0.14 * h); g.lineTo(w / 2, y - 0.02 * h); g.lineTo(0, y + 0.14 * h); g.closePath();
+    g.fillStyle = C[1]; g.fill();
+    g.beginPath(); g.moveTo(w, y + 0.14 * h); g.lineTo(w / 2, y - 0.02 * h); g.lineTo(0, y + 0.14 * h);
+    g.strokeStyle = C[2]; g.lineWidth = w * 0.035; g.stroke();
+  } },
+  { name: 'Meia-lua', uses: 3, draw(g, w, h, C) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    g.beginPath(); g.ellipse(w / 2, h, w * 0.46, h * 0.2, 0, 0, Math.PI * 2); g.fillStyle = C[1]; g.fill();
+    g.strokeStyle = C[2]; g.lineWidth = w * 0.03; g.stroke();
+  } },
+  { name: 'Degradê', uses: 3, draw(g, w, h, C) {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0.05, C[2]); gr.addColorStop(0.5, C[1]); gr.addColorStop(0.95, C[0]);
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  } },
+  { name: 'Baby boomer', uses: 2, draw(g, w, h, C, F) {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, C[1]); gr.addColorStop(Math.min(0.6, Math.max(0.2, F / h * 1.1)), C[1]); gr.addColorStop(0.78, C[0]);
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  } },
+  { name: 'Mármore', uses: 3, draw(g, w, h, C, F, R) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    g.save(); g.filter = 'blur(' + Math.round(w * 0.07) + 'px)';
+    for (let i = 0; i < 4; i++) { g.globalAlpha = 0.45; g.fillStyle = C[1]; g.beginPath(); g.ellipse(R() * w, R() * h, w * (0.2 + R() * 0.3), h * (0.08 + R() * 0.12), R() * 3, 0, 7); g.fill(); }
+    g.restore();
+    const vein = (col, lw) => {
+      g.beginPath(); let x = R() * w, y = 0; g.moveTo(x, y);
+      while (y < h) { const nx = x + (R() - 0.5) * w * 0.5, ny = y + h * (0.06 + R() * 0.1); g.quadraticCurveTo((x + nx) / 2 + (R() - 0.5) * w * 0.3, (y + ny) / 2, nx, ny); x = nx; y = ny; }
+      g.strokeStyle = col; g.lineWidth = lw; g.stroke();
+    };
+    vein(C[1], w * 0.05); vein(C[1], w * 0.02); vein(C[2], w * 0.018);
+  } },
+  { name: 'Bolinhas', uses: 3, draw(g, w, h, C) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    const s = w * 0.3;
+    for (let r = 0, y = s * 0.4; y < h + s; r++, y += s * 0.75) for (let x = (r % 2) * s / 2; x < w + s; x += s) {
+      g.beginPath(); pCirc(g, x, y, w * 0.085); g.fillStyle = C[1]; g.fill();
+      g.beginPath(); pCirc(g, x + s / 2, y + s * 0.37, w * 0.03); g.fillStyle = C[2]; g.fill();
+    }
+  } },
+  { name: 'Listras', uses: 3, draw(g, w, h, C) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    for (let y = h * 0.04, i = 0; y < h; y += h * 0.13, i++) { g.fillStyle = C[1 + (i % 2)]; g.fillRect(0, y, w, i % 2 ? h * 0.015 : h * 0.04); }
+  } },
+  { name: 'Listras diagonais', uses: 3, draw(g, w, h, C) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    g.save(); g.translate(w / 2, h / 2); g.rotate(-Math.PI / 4);
+    const L = w + h; for (let x = -L, i = 0; x < L; x += w * 0.28, i++) { g.fillStyle = C[1 + (i % 2)]; g.fillRect(x, -L, i % 2 ? w * 0.04 : w * 0.11, 2 * L); }
+    g.restore();
+  } },
+  { name: 'Xadrez', uses: 3, draw(g, w, h, C) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    const s = w * 0.25; g.globalAlpha = 0.55; g.fillStyle = C[1];
+    for (let x = 0; x < w; x += 2 * s) g.fillRect(x, 0, s, h);
+    for (let y = 0; y < h; y += 2 * s) g.fillRect(0, y, w, s);
+    g.globalAlpha = 1; g.strokeStyle = C[2]; g.lineWidth = w * 0.012;
+    for (let x = s * 1.5; x < w; x += 2 * s) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+    for (let y = s * 1.5; y < h; y += 2 * s) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+  } },
+  { name: 'Oncinha', uses: 3, draw(g, w, h, C, F, R) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    const n = Math.round(h / w * 5);
+    for (let i = 0; i < n; i++) {
+      const x = R() * w, y = R() * h, r = w * (0.08 + R() * 0.06), a = R() * 3;
+      g.beginPath(); g.ellipse(x, y, r, r * 0.75, a, 0, 7); g.fillStyle = C[1]; g.fill();
+      g.strokeStyle = C[2]; g.lineWidth = w * 0.035; g.lineCap = 'round';
+      for (let k = 0; k < 3; k++) { const s = a + k * 2.1 + R() * 0.4; g.beginPath(); g.ellipse(x, y, r * 1.25, r * 0.95, a, s, s + 1.3); g.stroke(); }
+    }
+  } },
+  { name: 'Zebra', uses: 2, draw(g, w, h, C, F, R) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    g.fillStyle = C[1];
+    for (let y = h * 0.05; y < h; y += h * (0.09 + R() * 0.05)) {
+      const t = h * (0.02 + R() * 0.025), side = R() < 0.5, len = w * (0.55 + R() * 0.5), x0 = side ? -w * 0.05 : w * 1.05, sg = side ? 1 : -1;
+      g.beginPath(); g.moveTo(x0, y - t);
+      g.quadraticCurveTo(x0 + sg * len * 0.5, y - t * 2 + (R() - 0.5) * h * 0.06, x0 + sg * len, y);
+      g.quadraticCurveTo(x0 + sg * len * 0.5, y + t * 2, x0, y + t); g.fill();
+    }
+  } },
+  { name: 'Corações', uses: 3, draw(g, w, h, C, F, R) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    const s = w * 0.36;
+    for (let r = 0, y = s * 0.55; y < h + s; r++, y += s) for (let x = (r % 2) * s / 2 + s * 0.3; x < w + s; x += s) {
+      g.beginPath(); pHeart(g, x, y, w * 0.11); g.fillStyle = C[1]; g.fill();
+      g.beginPath(); pHeart(g, x + s / 2, y + s / 2, w * 0.04); g.fillStyle = C[2]; g.fill();
+    }
+  } },
+  { name: 'Estrelas', uses: 3, draw(g, w, h, C, F, R) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    const n = Math.round(h / w * 4);
+    for (let i = 0; i < n; i++) { g.beginPath(); pStar(g, R() * w, R() * h, w * 0.13, w * 0.055, 5, R() * 6); g.fillStyle = C[1]; g.fill(); }
+    for (let i = 0; i < n * 2; i++) { g.beginPath(); pStar(g, R() * w, R() * h, w * 0.06, w * 0.012, 4, 0); g.fillStyle = C[2]; g.fill(); }
+  } },
+  { name: 'Flores', uses: 3, draw(g, w, h, C, F, R) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    const n = Math.round(h / w * 3) + 1;
+    for (let i = 0; i < n; i++) {
+      const x = (0.15 + R() * 0.7) * w, y = (i + 0.5) / n * h + (R() - 0.5) * h * 0.08, r = w * (0.1 + R() * 0.06), a0 = R() * 6;
+      g.fillStyle = C[1]; g.beginPath();
+      for (let k = 0; k < 5; k++) { const a = a0 + k * 1.2566; g.moveTo(x, y); g.ellipse(x + Math.cos(a) * r, y + Math.sin(a) * r, r * 0.85, r * 0.55, a, 0, 7); }
+      g.fill(); g.beginPath(); pCirc(g, x, y, r * 0.45); g.fillStyle = C[2]; g.fill();
+    }
+  } },
+  { name: 'Zigue-zague', uses: 3, draw(g, w, h, C) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    const s = w / 4;
+    for (let y = h * 0.1, i = 0; y < h + s; y += h * 0.12, i++) {
+      g.beginPath(); for (let x = 0, k = 0; x <= w + s; x += s / 2, k++) g.lineTo(x, y + (k % 2 ? -s * 0.35 : 0));
+      g.strokeStyle = C[1 + (i % 2)]; g.lineWidth = i % 2 ? h * 0.012 : h * 0.03; g.lineJoin = 'miter'; g.stroke();
+    }
+  } },
+  { name: 'Geométrico', uses: 3, draw(g, w, h, C) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    g.fillStyle = C[1]; g.beginPath(); g.moveTo(0, 0); g.lineTo(w * 0.85, 0); g.lineTo(0, h * 0.55); g.fill();
+    g.fillStyle = C[2]; g.beginPath(); g.moveTo(w, h * 0.35); g.lineTo(w, h); g.lineTo(w * 0.3, h); g.fill();
+    g.strokeStyle = C[2]; g.lineWidth = w * 0.025;
+    g.beginPath(); g.moveTo(w * 0.85, 0); g.lineTo(0, h * 0.55); g.moveTo(w, h * 0.35); g.lineTo(w * 0.3, h); g.stroke();
+  } },
+  { name: 'Aquarela', uses: 3, draw(g, w, h, C, F, R) {
+    g.fillStyle = C[0]; g.fillRect(0, 0, w, h);
+    g.save(); g.filter = 'blur(' + Math.round(w * 0.08) + 'px)';
+    for (let i = 0; i < 7; i++) { g.globalAlpha = 0.6; g.fillStyle = C[1 + (i % 2)]; g.beginPath(); pCirc(g, R() * w, R() * h, w * (0.18 + R() * 0.22)); g.fill(); }
+    g.restore();
+  } },
+  { name: 'Espiral', uses: 3, draw(g, w, h, C) {
+    const cx = w / 2, cy = h * 0.55;
+    if (g.createConicGradient) {
+      for (let k = 0; k < 6; k++) {
+        const gr = g.createConicGradient(k * 0.5, cx, cy);
+        [C[0], C[1], C[2], C[0], C[1], C[2], C[0]].forEach((c, i) => gr.addColorStop(i / 6, c));
+        g.globalAlpha = k ? 0.35 : 1; g.fillStyle = gr;
+        g.beginPath(); pCirc(g, cx, cy, Math.max(w, h) * (1 - k * 0.15)); g.fill();
+      }
+      g.globalAlpha = 1;
+    } else {
+      const gr = g.createRadialGradient(cx, cy, 0, cx, cy, h * 0.6); gr.addColorStop(0, C[2]); gr.addColorStop(0.5, C[1]); gr.addColorStop(1, C[0]);
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    }
+  } },
+];
+
+/* ---------- 10 acabamentos ---------- */
+const FINISHES = [
+  { name: 'Cremoso', desc: 'Cor sólida e opaca com brilho suave. É o esmalte comum do dia a dia.', p: { roughness: 0.32, metalness: 0, clearcoat: 0.5, clearcoatRoughness: 0.18 } },
+  { name: 'Gel (alto brilho)', desc: 'Brilho intenso e espelhado, como a esmaltação em gel curada na cabine UV/LED.', p: { roughness: 0.12, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.02 } },
+  { name: 'Acetinado', desc: 'O semibrilho: meio-termo entre brilhoso e fosco, com reflexo suave e aveludado.', p: { roughness: 0.5, metalness: 0, clearcoat: 0.25, clearcoatRoughness: 0.5 } },
+  { name: 'Fosco (matte)', desc: 'Sem brilho nenhum. Geralmente feito com top coat (finalizador) fosco.', p: { roughness: 0.92, metalness: 0, clearcoat: 0, clearcoatRoughness: 1 } },
+  { name: 'Perolado', desc: 'Reflexo leitoso e luminoso, que lembra a superfície de uma pérola.', p: { roughness: 0.3, metalness: 0.15, clearcoat: 0.8, clearcoatRoughness: 0.1 }, sheen: true },
+  { name: 'Cintilante', desc: 'Também chamado de shimmer: micropartículas finas que dão um brilho delicado, sem pedaços visíveis.', p: { roughness: 0.28, metalness: 0.35, clearcoat: 0.9, clearcoatRoughness: 0.05 }, normal: 'fine', flakes: 'fine' },
+  { name: 'Metálico', desc: 'Aspecto de metal, com reflexo forte e cor profunda.', p: { roughness: 0.3, metalness: 0.85, clearcoat: 0.4, clearcoatRoughness: 0.2 } },
+  { name: 'Cromado', desc: 'Efeito espelho, feito com pó cromado aplicado sobre o gel.', p: { roughness: 0.05, metalness: 1, clearcoat: 1, clearcoatRoughness: 0 } },
+  { name: 'Glitter', desc: 'Partículas brilhantes visíveis que refletem a luz em pontos.', p: { roughness: 0.22, metalness: 0.6, clearcoat: 1, clearcoatRoughness: 0.02 }, normal: 'coarse', flakes: 'coarse' },
+  { name: 'Holográfico', desc: 'Partículas que refletem as cores do arco-íris conforme o ângulo da luz.', p: { roughness: 0.18, metalness: 0.75, clearcoat: 1, clearcoatRoughness: 0.02 }, normal: 'coarse', flakes: 'holo' },
+];
+
+function drawFlakes(g, w, h, kind, R) {
+  const n = kind === 'fine' ? w * h / 18 : w * h / 60, s = kind === 'fine' ? 1 : 2.4;
+  for (let i = 0; i < n; i++) {
+    const x = R() * w, y = R() * h;
+    if (kind === 'holo') g.fillStyle = 'hsla(' + Math.round(R() * 360) + ',95%,70%,0.85)';
+    else g.fillStyle = 'rgba(255,255,255,' + (kind === 'fine' ? 0.18 + R() * 0.25 : 0.25 + R() * 0.5) + ')';
+    g.fillRect(x, y, s * (0.6 + R()), s * (0.6 + R()));
+  }
+}
+function flakeNormalMap(kind) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 512;
+  const g = c.getContext('2d'), R = mulberry(kind === 'fine' ? 7 : 11);
+  g.fillStyle = 'rgb(128,128,255)'; g.fillRect(0, 0, 256, 512);
+  const n = kind === 'fine' ? 9000 : 2600, s = kind === 'fine' ? 2 : 5;
+  for (let i = 0; i < n; i++) {
+    const nx = (R() - 0.5) * 1.3, ny = (R() - 0.5) * 1.3, nz = Math.sqrt(Math.max(0.1, 1 - nx * nx - ny * ny));
+    g.fillStyle = 'rgb(' + Math.round(128 + nx * 127) + ',' + Math.round(128 + ny * 127) + ',' + Math.round(nz * 255) + ')';
+    g.fillRect(R() * 256, R() * 512, s, s);
+  }
+  const t = new THREE.CanvasTexture(c); t.flipY = false; return t;
+}
+
+/* ---------- Adesivos (16): desenhados com borda branca de vinil ---------- */
+const ADESIVOS = [
+  { name: 'Coração', col: '#e8336d', d: (P, c) => P(g => pHeart(g, 0, 0, 0.8), c) },
+  { name: 'Estrela', col: '#f5c518', d: (P, c) => P(g => pStar(g, 0, 0.05, 0.95, 0.42), c) },
+  { name: 'Flor', col: '#ff8fb8', d: (P, c) => { P(g => { for (let k = 0; k < 5; k++) { const a = k * 1.2566 - 1.57; pCirc(g, Math.cos(a) * 0.48, Math.sin(a) * 0.48, 0.42); } }, c); P(g => pCirc(g, 0, 0, 0.3), '#ffd34d'); } },
+  { name: 'Margarida', col: '#ffffff', d: (P, c) => { P(g => { for (let k = 0; k < 10; k++) { const a = k * 0.628; g.moveTo(0, 0); g.ellipse(Math.cos(a) * 0.55, Math.sin(a) * 0.55, 0.42, 0.16, a, 0, 7); } }, c); P(g => pCirc(g, 0, 0, 0.26), '#ffc21a'); } },
+  { name: 'Borboleta', col: '#7b5cff', d: (P, c) => { P(g => { g.ellipse(-0.45, -0.3, 0.45, 0.55, -0.5, 0, 7); g.moveTo(0.9, -0.3); g.ellipse(0.45, -0.3, 0.45, 0.55, 0.5, 0, 7); g.moveTo(-0.1, 0.4); g.ellipse(-0.35, 0.4, 0.3, 0.38, 0.6, 0, 7); g.moveTo(0.7, 0.4); g.ellipse(0.35, 0.4, 0.3, 0.38, -0.6, 0, 7); }, c); P(g => g.ellipse(0, 0.05, 0.09, 0.62, 0, 0, 7), '#2a2140'); } },
+  { name: 'Lua', col: '#f5d76e', d: (P, c) => P(g => { g.arc(0, 0, 0.85, 0.85, -0.85 + Math.PI * 2, false); g.arc(0.38, -0.12, 0.66, -1.25, 1.25 - 0.0, true); g.closePath(); }, c) },
+  { name: 'Gota', col: '#4fb8ff', d: (P, c) => P(g => { g.moveTo(0, -0.9); g.bezierCurveTo(0.2, -0.5, 0.65, -0.05, 0.65, 0.3); g.arc(0, 0.3, 0.65, 0, Math.PI); g.bezierCurveTo(-0.65, -0.05, -0.2, -0.5, 0, -0.9); }, c) },
+  { name: 'Folha', col: '#3aa66a', d: (P, c) => { P(g => { g.moveTo(0, -0.95); g.quadraticCurveTo(0.95, -0.2, 0, 0.8); g.quadraticCurveTo(-0.95, -0.2, 0, -0.95); }, c); P(g => { g.moveTo(0, -0.7); g.lineTo(0, 0.95); }, '#1f6b42', 0.07); } },
+  { name: 'Floco de neve', col: '#9fd8ff', d: (P, c) => P(g => { for (let k = 0; k < 6; k++) { const a = k * 1.047, ca = Math.cos(a), sa = Math.sin(a); g.moveTo(0, 0); g.lineTo(ca * 0.9, sa * 0.9); const bx = ca * 0.55, by = sa * 0.55; g.moveTo(bx, by); g.lineTo(bx + Math.cos(a + 0.7) * 0.28, by + Math.sin(a + 0.7) * 0.28); g.moveTo(bx, by); g.lineTo(bx + Math.cos(a - 0.7) * 0.28, by + Math.sin(a - 0.7) * 0.28); } }, c, 0.13) },
+  { name: 'Sol', col: '#ffb627', d: (P, c) => P(g => { pCirc(g, 0, 0, 0.45); for (let k = 0; k < 10; k++) { const a = k * 0.628; g.moveTo(Math.cos(a - 0.15) * 0.55, Math.sin(a - 0.15) * 0.55); g.lineTo(Math.cos(a) * 0.95, Math.sin(a) * 0.95); g.lineTo(Math.cos(a + 0.15) * 0.55, Math.sin(a + 0.15) * 0.55); g.closePath(); } }, c) },
+  { name: 'Trevo', col: '#2fa35a', d: (P, c) => { P(g => { g.moveTo(0, 0.3); g.quadraticCurveTo(0.1, 0.7, 0.35, 0.95); }, c, 0.12); P(g => { for (let k = 0; k < 4; k++) { g.save(); g.rotate(k * Math.PI / 2 + Math.PI / 4); pHeart(g, 0, -0.42, 0.38); g.restore(); } }, c); } },
+  { name: 'Coroa', col: '#e0b43a', d: (P, c) => { P(g => { g.moveTo(-0.85, 0.55); g.lineTo(-0.9, -0.45); g.lineTo(-0.45, 0); g.lineTo(0, -0.7); g.lineTo(0.45, 0); g.lineTo(0.9, -0.45); g.lineTo(0.85, 0.55); g.closePath(); }, c); P(g => { pCirc(g, 0, 0.25, 0.12); pCirc(g, -0.5, 0.3, 0.09); pCirc(g, 0.5, 0.3, 0.09); }, '#e8336d'); } },
+  { name: 'Cereja', col: '#d21f3c', d: (P, c) => { P(g => { g.moveTo(-0.38, 0.25); g.quadraticCurveTo(-0.1, -0.5, 0.35, -0.85); g.moveTo(0.38, 0.35); g.quadraticCurveTo(0.3, -0.4, 0.35, -0.85); }, '#3a8a3a', 0.08); P(g => { pCirc(g, -0.4, 0.45, 0.38); pCirc(g, 0.4, 0.55, 0.38); }, c); } },
+  { name: 'Raio', col: '#ffd000', d: (P, c) => P(g => { g.moveTo(0.2, -0.95); g.lineTo(-0.55, 0.15); g.lineTo(-0.02, 0.15); g.lineTo(-0.25, 0.95); g.lineTo(0.55, -0.2); g.lineTo(0.02, -0.2); g.closePath(); }, c) },
+  { name: 'Arco-íris', col: '#ff4d4d', d: (P, c) => { ['#ff4d4d', '#ffa53b', '#ffe03b', '#48c774', '#3b8bff', '#9b5de5'].forEach((k, i) => P(g => { g.arc(0, 0.45, 0.85 - i * 0.11, Math.PI, 0); }, i ? k : c, 0.1)); } },
+  { name: 'Laço', col: '#ff5d8f', d: (P, c) => { P(g => { g.moveTo(0, 0); g.lineTo(-0.9, -0.55); g.lineTo(-0.9, 0.55); g.closePath(); g.moveTo(0, 0); g.lineTo(0.9, -0.55); g.lineTo(0.9, 0.55); g.closePath(); g.moveTo(0, 0); g.lineTo(-0.4, 0.9); g.lineTo(-0.15, 0.9); g.closePath(); g.moveTo(0, 0); g.lineTo(0.4, 0.9); g.lineTo(0.15, 0.9); g.closePath(); }, c); P(g => pCirc(g, 0, 0, 0.22), c); } },
+];
+/* desenha um adesivo: passada 1 = borda branca, passada 2 = cores */
+function drawSticker(g, size, item, col, border = true) {
+  g.save(); g.translate(size / 2, size / 2); g.scale(size * 0.4, size * 0.4);
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  for (const pass of border ? ['b', 'f'] : ['f']) {
+    item.d((path, fill, strokeW) => {
+      g.beginPath(); path(g);
+      if (pass === 'b') { g.strokeStyle = g.fillStyle = '#ffffff'; g.lineWidth = (strokeW || 0) + 0.2; g.stroke(); if (!strokeW) g.fill(); return; }
+      if (strokeW) { g.strokeStyle = fill; g.lineWidth = strokeW; g.stroke(); } else { g.fillStyle = fill; g.fill(); }
+    }, col);
+  }
+  g.restore();
+}
+
+/* ---------- Pingentes 3D (14) ---------- */
+const V2 = (x, y) => new THREE.Vector2(x, y);
+function latheGem(seg, phi = 0, R = 1) {
+  const g = new THREE.LatheGeometry([V2(0, 0), V2(R, 0), V2(R, 0.12), V2(R * 0.6, 0.45), V2(0, 0.45)], seg, phi);
+  g.rotateX(Math.PI / 2); return g;
+}
+function deform(g, fn) { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const o = fn(p.getX(i), p.getY(i), p.getZ(i)); p.setXYZ(i, o[0], o[1], o[2]); } g.computeVertexNormals(); return g; }
+function shapeHeart(s = 1) { const sh = new THREE.Shape(); sh.moveTo(0, 0.35 * s); sh.bezierCurveTo(0, 0.8 * s, -s, 0.8 * s, -s, 0.25 * s); sh.bezierCurveTo(-s, -0.25 * s, -0.35 * s, -0.55 * s, 0, -0.9 * s); sh.bezierCurveTo(0.35 * s, -0.55 * s, s, -0.25 * s, s, 0.25 * s); sh.bezierCurveTo(s, 0.8 * s, 0, 0.8 * s, 0, 0.35 * s); return sh; }
+function shapeStar() { const sh = new THREE.Shape(); for (let i = 0; i < 10; i++) { const a = Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? 0.42 : 1; i ? sh.lineTo(Math.cos(a) * q, Math.sin(a) * q) : sh.moveTo(Math.cos(a) * q, Math.sin(a) * q); } return sh; }
+function shapeMoon() { const sh = new THREE.Shape(); const a = 48.7 * Math.PI / 180, b = 74.4 * Math.PI / 180; sh.absarc(0, 0, 1, a, Math.PI * 2 - a, false); sh.absarc(0.45, 0, 0.78, Math.PI * 2 - b, b, true); return sh; }
+function shapeBow() { const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.quadraticCurveTo(-0.5, 0.75, -1, 0.5); sh.lineTo(-1, -0.5); sh.quadraticCurveTo(-0.5, -0.75, 0, 0); sh.quadraticCurveTo(0.5, 0.75, 1, 0.5); sh.lineTo(1, -0.5); sh.quadraticCurveTo(0.5, -0.75, 0, 0); return sh; }
+const extr = (sh, faceted) => new THREE.ExtrudeGeometry(sh, faceted
+  ? { depth: 0.12, bevelEnabled: true, bevelThickness: 0.28, bevelSize: 0.22, bevelSegments: 1, curveSegments: 10 }
+  : { depth: 0.15, bevelEnabled: true, bevelThickness: 0.18, bevelSize: 0.12, bevelSegments: 4, curveSegments: 16 });
+
+const PINGENTES = [
+  { name: 'Strass redondo', mat: 'gem', col: '#f4f8ff', geo: () => latheGem(12) },
+  { name: 'Strass gota', mat: 'gem', col: '#ff7fb0', geo: () => deform(latheGem(24), (x, y, z) => y > 0 ? [x * (1 - 0.6 * Math.min(1, y)), y * 1.8, z] : [x, y, z]) },
+  { name: 'Strass navete', mat: 'gem', col: '#3d7bff', geo: () => deform(latheGem(24), (x, y, z) => [x * (1 - 0.35 * Math.abs(y)), y * 1.9, z]) },
+  { name: 'Strass quadrado', mat: 'gem', col: '#14a37a', geo: () => latheGem(4, Math.PI / 4, 1.3) },
+  { name: 'Strass coração', mat: 'gem', col: '#d01836', geo: () => extr(shapeHeart(0.85), true) },
+  { name: 'Pérola', mat: 'pearl', col: '#fbf6ee', geo: () => new THREE.SphereGeometry(0.85, 28, 18).translate(0, 0, 0.5) },
+  { name: 'Meia-pérola', mat: 'pearl', col: '#f6e7ef', geo: () => new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2).rotateX(Math.PI / 2) },
+  { name: 'Caviar', mat: 'metal', col: '#d4af37', geo: () => { const G = new THREE.Group(); const R = mulberry(5); for (let i = 0; i < 9; i++) { const a = R() * 6.28, r = Math.sqrt(R()) * 0.9; const m = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 8)); m.position.set(Math.cos(a) * r, Math.sin(a) * r, 0.22); G.add(m); } return G; } },
+  { name: 'Spike', mat: 'metal', col: '#c8ccd2', geo: () => new THREE.ConeGeometry(0.7, 1.8, 24).translate(0, 0.9, 0).rotateX(Math.PI / 2) },
+  { name: 'Estrela de metal', mat: 'metal', col: '#d4af37', geo: () => extr(shapeStar(), false) },
+  { name: 'Coração de metal', mat: 'metal', col: '#e8b4a0', geo: () => extr(shapeHeart(0.85), false) },
+  { name: 'Laço 3D', mat: 'metal', col: '#ff5d8f', geo: () => extr(shapeBow(), false) },
+  { name: 'Argola (piercing)', mat: 'metal', col: '#c8ccd2', geo: () => new THREE.TorusGeometry(0.8, 0.16, 14, 36).rotateY(Math.PI / 2).translate(0, 0, 0.75) },
+  { name: 'Lua de metal', mat: 'metal', col: '#d4af37', geo: () => extr(shapeMoon(), false) },
+];
+/* ícones 2D dos pingentes no painel */
+const PINGENTE_ICON = [
+  (g, c) => { g.beginPath(); pCirc(g, 0, 0, 0.8); return 'gem'; },
+  (g) => { g.beginPath(); g.moveTo(0, -0.95); g.bezierCurveTo(0.2, -0.5, 0.6, -0.05, 0.6, 0.3); g.arc(0, 0.3, 0.6, 0, Math.PI); g.bezierCurveTo(-0.6, -0.05, -0.2, -0.5, 0, -0.95); return 'gem'; },
+  (g) => { g.beginPath(); g.moveTo(0, -0.95); g.quadraticCurveTo(0.75, 0, 0, 0.95); g.quadraticCurveTo(-0.75, 0, 0, -0.95); return 'gem'; },
+  (g) => { g.beginPath(); g.rect(-0.7, -0.7, 1.4, 1.4); return 'gem'; },
+  (g) => { g.beginPath(); pHeart(g, 0, 0, 0.8); return 'gem'; },
+  (g) => { g.beginPath(); pCirc(g, 0, 0, 0.8); return 'pearl'; },
+  (g) => { g.beginPath(); g.arc(0, 0.3, 0.85, Math.PI, 0); g.closePath(); return 'pearl'; },
+  (g) => { g.beginPath(); [[0, 0], [0.5, 0.2], [-0.45, 0.3], [0.1, -0.5], [-0.3, -0.35], [0.45, -0.4], [0.05, 0.6], [-0.6, -0.05]].forEach(p => pCirc(g, p[0], p[1], 0.26)); return 'metal'; },
+  (g) => { g.beginPath(); g.moveTo(0, -0.9); g.lineTo(0.65, 0.75); g.lineTo(-0.65, 0.75); g.closePath(); return 'metal'; },
+  (g) => { g.beginPath(); pStar(g, 0, 0.05, 0.92, 0.4); return 'metal'; },
+  (g) => { g.beginPath(); pHeart(g, 0, 0, 0.8); return 'metal'; },
+  (g) => { g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-0.45, -0.7, -0.9, -0.45); g.lineTo(-0.9, 0.45); g.quadraticCurveTo(-0.45, 0.7, 0, 0); g.quadraticCurveTo(0.45, -0.7, 0.9, -0.45); g.lineTo(0.9, 0.45); g.quadraticCurveTo(0.45, 0.7, 0, 0); return 'metal'; },
+  (g) => { g.beginPath(); g.arc(0, 0, 0.75, 0, Math.PI * 2); g.arc(0, 0, 0.5, 0, Math.PI * 2, true); return 'metal'; },
+  (g) => { g.beginPath(); g.arc(0, 0, 0.85, 0.85, -0.85 + Math.PI * 2); g.arc(0.38, -0.12, 0.66, -1.25, 1.25, true); g.closePath(); return 'metal'; },
+];
+function drawPingenteIcon(g, size, i, col) {
+  g.save(); g.translate(size / 2, size / 2); g.scale(size * 0.4, size * 0.4);
+  const kind = PINGENTE_ICON[i](g);
+  const gr = g.createRadialGradient(-0.35, -0.4, 0.05, 0, 0, 1.1);
+  gr.addColorStop(0, '#ffffff'); gr.addColorStop(kind === 'pearl' ? 0.55 : 0.3, col); gr.addColorStop(1, kind === 'metal' ? '#4a4030' : col);
+  g.fillStyle = gr; g.fill('evenodd');
+  if (kind === 'gem') { g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 0.06; g.stroke(); }
+  g.restore();
+}
+
+const ITEM_CORES = [
+  ['Cristal', '#f4f8ff'], ['Rosa', '#ff7fb0'], ['Vermelho', '#d01836'], ['Azul', '#3d7bff'], ['Esmeralda', '#14a37a'],
+  ['Ametista', '#9b5de5'], ['Dourado', '#d4af37'], ['Prata', '#c8ccd2'], ['Rosé', '#e8b4a0'], ['Preto', '#1b1b1f'],
+];
+
+/* ===== Interface, cena three.js, unhas e decoração ===== */
+(function () {
+  const $ = id => document.getElementById(id);
+  const pt = (v, d = 1) => v.toFixed(d).replace('.', ',');
+  const lin = css => new THREE.Color(css).convertSRGBToLinear();
+  const cssCol = c => 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + c.a + ')';
+
+  /* ---------- dados da mão ---------- */
+  const SHAPE_DEF = [
+    ['palmW', 'Largura da palma', 6.5, 11, 0.1, v => pt(v) + ' cm'],
+    ['palmL', 'Comprimento da palma', 8, 11, 0.1, v => pt(v) + ' cm'],
+    ['fingerLen', 'Comprimento dos dedos', 0.8, 1.25, 0.01, v => '×' + pt(v, 2)],
+    ['fingerR', 'Espessura dos dedos', 0.75, 1.35, 0.01, v => '×' + pt(v, 2)],
+    ['thumb', 'Tamanho do polegar', 0.85, 1.2, 0.01, v => '×' + pt(v, 2)],
+    ['wrist', 'Largura do pulso', 4.4, 7.4, 0.1, v => pt(v) + ' cm'],
+    ['flesh', 'Carnosidade', 0, 1, 0.01],
+    ['tendon', 'Tendões no dorso', 0, 1, 0.01],
+    ['knuckle', 'Nós dos dedos', 0, 1, 0.01],
+    ['taper', 'Pontas afiladas', 0, 1, 0.01],
+  ];
+  const KEYS = SHAPE_DEF.map(d => d[0]);
+  const PRESETS = [
+    ['Delicada', [7.2, 8.8, 1.05, 0.85, 0.92, 4.8, 0.2, 0.1, 0.2, 0.6]],
+    ['Clássica', [8.2, 9.4, 1.0, 1.0, 1.0, 5.6, 0.4, 0.25, 0.35, 0.4]],
+    ['Tendões marcados', [8.2, 9.6, 1.02, 0.95, 1.0, 5.6, 0.2, 0.8, 0.6, 0.4]],
+    ['Larga', [9.4, 9.2, 0.92, 1.1, 1.05, 6.4, 0.55, 0.3, 0.35, 0.3]],
+    ['Robusta', [9.8, 10, 0.95, 1.22, 1.12, 6.8, 0.8, 0.35, 0.5, 0.25]],
+    ['Dedos longos', [7.8, 9.6, 1.18, 0.88, 0.98, 5.2, 0.15, 0.4, 0.4, 0.7]],
+    ['Ossuda', [8.4, 10, 1.1, 0.82, 1.0, 5.4, 0, 1.0, 0.9, 0.5]],
+  ];
+  const POSES = [
+    ['Aberta', { curl: 0, spread: 1, thumbOut: 1 }],
+    ['Relaxada', { curl: 0.18, spread: 0.35, thumbOut: 0.5 }],
+    ['Meio fechada', { curl: 0.5, spread: 0.2, thumbOut: 0.3 }],
+    ['Punho', { curl: 1, spread: 0, thumbOut: 0 }],
+  ];
+  const POSE_DEF = [
+    ['curl', 'Curvatura dos dedos', 0, 1, 0.01],
+    ['spread', 'Abertura entre dedos', 0, 1.3, 0.01],
+    ['thumbOut', 'Afastamento do polegar', 0, 1, 0.01],
+  ];
+  const TONES = [
+    ['#f6ede4', 'Muito clara'], ['#f3e7db', 'Clara'], ['#f7ead0', 'Clara dourada'], ['#eadaba', 'Média clara'],
+    ['#d7bd96', 'Média'], ['#a07e56', 'Média escura'], ['#825c43', 'Morena'], ['#604134', 'Escura'],
+    ['#3a312a', 'Muito escura'], ['#292420', 'Profunda'],
+  ];
+  const ESMALTES = [
+    ['Natural', 246, 206, 200, 0.55], ['Gloss', 255, 255, 255, 0.18], ['Rosa', 245, 184, 200, 0.95], ['Vermelho', 200, 16, 46, 1],
+    ['Vinho', 110, 18, 40, 1], ['Coral', 255, 111, 97, 1], ['Nude', 214, 170, 146, 1], ['Branco', 250, 250, 250, 1],
+    ['Preto', 18, 18, 22, 1], ['Azul-serenity', 128, 140, 222, 1], ['Verde-musgo', 50, 90, 60, 1], ['Lilás', 176, 140, 220, 0.9],
+    ['Dourado', 212, 175, 55, 1], ['Prata', 200, 204, 210, 1], ['Laranja', 255, 140, 30, 1], ['Azul-marinho', 22, 40, 90, 1],
+  ];
+
+  /* ---------- estado ---------- */
+  const shape = {}, pose = {};
+  let cell = 0.28, mode = 'skin', toneIdx = 3, presetName = 'Clássica';
+  const nailOpt = { shape: 5, len: 1, base: 0.5 };
+  const nails = Array.from({ length: 5 }, () => ({
+    pat: 1, fin: 1,
+    cols: [{ r: 246, g: 206, b: 200, a: 0.55 }, { r: 255, g: 251, b: 247, a: 0.95 }, { r: 255, g: 255, b: 255, a: 0.9 }],
+  }));
+  let target = 'all', slot = 0;
+  const hsv = { h: 0, s: 0, v: 1, a: 1 };
+  const items = [];
+  let selected = null, armed = null, itemColor = null, dragItem = null;
+  const ref = () => (target === 'all' ? 1 : target);
+  const targets = () => (target === 'all' ? [0, 1, 2, 3, 4] : [target]);
+  let appMode = '3d';
+
+  /* ---------- cena ---------- */
+  const stage = $('stage'), canvas = $('gl');
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); }
+  catch (err) { $('stats').textContent = 'WebGL indisponível neste navegador.'; return; }
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.setClearColor(0x000000, 0);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 1, 1, 400);
+  let camDist = 66, baseDist = 66, tDist = null;
+  scene.add(camera);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa3a8, 0.225));
+  const rig = new THREE.Group(), lightTarget = new THREE.Object3D(); lightTarget.position.set(0, 0, -10); rig.add(lightTarget);
+  const key = new THREE.DirectionalLight(0xffffff, 0.4); key.position.set(-22, 30, 30);
+  const fill = new THREE.DirectionalLight(0xfff4ec, 0.125); fill.position.set(32, -6, 22);
+  const rim = new THREE.DirectionalLight(0xdfeaff, 0.25); rim.position.set(14, 20, -95);
+  [key, fill, rim].forEach(l => { l.target = lightTarget; rig.add(l); });
+  camera.add(rig);
+  const ocam = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 5000); scene.add(ocam);
+  let activeCam = camera;
+  const arGroup = new THREE.Group(); scene.add(arGroup);
+
+  // ambiente para reflexos (estúdio com softboxes)
+  {
+    const pm = new THREE.PMREMGenerator(renderer);
+    const es = new THREE.Scene();
+    const sg = new THREE.SphereGeometry(40, 32, 16), pa = sg.attributes.position, cols = [];
+    for (let i = 0; i < pa.count; i++) { const t = sstep(-0.6, 0.8, pa.getY(i) / 40); cols.push(lerp(0.1, 0.475, t), lerp(0.095, 0.475, t), lerp(0.09, 0.485, t)); }
+    sg.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    es.add(new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ side: THREE.BackSide, vertexColors: true })));
+    const panel = (w, h, p, k) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(k, k, k), side: THREE.DoubleSide })); m.position.set(p[0], p[1], p[2]); m.lookAt(0, 0, 0); es.add(m); };
+    panel(18, 12, [-18, 22, 22], 2); panel(30, 4, [24, 4, 14], 1); panel(14, 14, [6, 14, -30], 1.25); panel(8, 30, [-30, 0, -8], 0.75);
+    scene.environment = pm.fromScene(es, 0.02).texture;
+    pm.dispose();
+  }
+
+  const pivot = new THREE.Group(), flip = new THREE.Group(), hand = new THREE.Group();
+  let offY = -6, tOffY = -6;
+  hand.position.set(0, offY, 0);
+  scene.add(pivot); pivot.add(flip); flip.add(hand);
+
+  const skinMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.55, clearcoat: 0.08, clearcoatRoughness: 0.6, sheen: new THREE.Color(0.2, 0.11, 0.09), envMapIntensity: 0.45, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+  const wireMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.5 });
+  const skinMesh = new THREE.Mesh(new THREE.BufferGeometry(), skinMat);
+  const wireMesh = new THREE.LineSegments(new THREE.BufferGeometry(), wireMat);
+  const nailGroup = new THREE.Group(), itemGroup = new THREE.Group();
+  hand.add(skinMesh, wireMesh, nailGroup, itemGroup);
+
+  const NORMALS = { fine: flakeNormalMap('fine'), coarse: flakeNormalMap('coarse') };
+  const nailCv = [], nailTex = [], nailMats = [], nailMeshes = [];
+  for (let i = 0; i < 5; i++) {
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 256;
+    const tex = new THREE.CanvasTexture(cv); tex.flipY = false; tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
+    const mat = new THREE.MeshPhysicalMaterial({ map: tex, side: THREE.DoubleSide, transparent: true, envMapIntensity: 1.2 });
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), mat); mesh.userData.nail = i; mesh.renderOrder = 1;
+    nailCv.push(cv); nailTex.push(tex); nailMats.push(mat); nailMeshes.push(mesh); nailGroup.add(mesh);
+  }
+  const selRing = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.32, 40), new THREE.MeshBasicMaterial({ depthTest: false, transparent: true, opacity: 0.95, side: THREE.DoubleSide }));
+  selRing.renderOrder = 10; selRing.visible = false; hand.add(selRing);
+
+  let need = true, cur = null, models = [];
+  const lum = css => { const c = new THREE.Color(css); return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; };
+
+  /* ---------- pele ---------- */
+  function paintSkin() {
+    if (!cur) return;
+    const clay = mode === 'clay', css = clay ? '#c3c6c8' : TONES[toneIdx][0];
+    const b = new THREE.Color(css), l = lum(css);
+    const palm = b.clone().lerp(new THREE.Color('#f0d2c4'), clay ? 0 : 0.12 + 0.42 * (1 - l));
+    const red = clay ? b.clone() : b.clone().multiply(new THREE.Color(1, 0.8, 0.78));
+    [b, palm, red].forEach(c => c.convertSRGBToLinear());
+    const a = cur.color.array;
+    for (let i = 0; i < cur.nv; i++) {
+      const p = cur.wp[i], r = cur.wr[i] * 0.5;
+      for (let k = 0; k < 3; k++) {
+        const kk = k === 0 ? 'r' : k === 1 ? 'g' : 'b';
+        a[i * 3 + k] = (b[kk] * (1 - p) + palm[kk] * p) * (1 - r) + red[kk] * r;
+      }
+    }
+    cur.color.needsUpdate = true; need = true;
+  }
+  function applySkin() {
+    $('tone-val').textContent = 'Tom ' + (toneIdx + 1);
+    $('tone-name').textContent = TONES[toneIdx][0] + ' · ' + TONES[toneIdx][1];
+    paintSkin(); applyMode();
+  }
+  function applyMode() {
+    skinMat.colorWrite = mode !== 'wire';
+    wireMesh.visible = mode !== 'skin';
+    nailGroup.visible = itemGroup.visible = appMode === 'ar' ? !!AR.specs : mode !== 'wire';
+    selRing.visible = !!selected && nailGroup.visible;
+    let lineCss = '#000000', op = 0.35;
+    if (mode === 'skinwire') { if (lum(TONES[toneIdx][0]) < 0.12) { lineCss = '#ffffff'; op = 0.22; } }
+    else if (mode === 'clay') { lineCss = '#1e2326'; op = 0.6; }
+    else if (mode === 'wire') { lineCss = getComputedStyle(document.documentElement).getPropertyValue('--fg').trim() || '#172023'; op = 0.8; }
+    wireMat.color.copy(lin(lineCss)); wireMat.opacity = op;
+    selRing.material.color.copy(lin(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#0e7c86'));
+    need = true;
+  }
+
+  /* ---------- unhas ---------- */
+  function buildNails() {
+    if (appMode === 'ar') return buildARNails();
+    if (!cur) return;
+    models = cur.sk.fingers.map((fg, i) => nailModel(fg, i === 0, NAIL_SHAPES[nailOpt.shape], nailOpt.len, nailOpt.base));
+    for (let i = 0; i < 5; i++) { nailMeshes[i].geometry.dispose(); nailMeshes[i].geometry = nailGeometry(models[i]); paintNail(i); }
+    items.forEach(placeItem);
+    need = true;
+  }
+  function paintNail(i) {
+    const N = nails[i], m = models[i]; if (!m) return;
+    const w = appMode === 'ar' ? 256 : 128, h = clamp(Math.round(w * m.vmax / (2 * m.W)), 96, 720);
+    let cv = nailCv[i];
+    if (cv.height !== h || cv.width !== w) {
+      cv.width = w; cv.height = h;
+      nailTex[i].dispose();
+      const t = new THREE.CanvasTexture(cv); t.flipY = false; t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+      nailTex[i] = t; nailMats[i].map = t;
+    }
+    const g = cv.getContext('2d');
+    g.clearRect(0, 0, w, h);
+    g.save(); PATTERNS[N.pat].draw(g, w, h, N.cols.map(cssCol), (1 - m.Lf / m.vmax) * h, mulberry(i * 97 + N.pat * 13 + 7)); g.restore();
+    const F = FINISHES[N.fin];
+    if (F.flakes) drawFlakes(g, w, h, F.flakes, mulberry(i * 31 + 3));
+    const mat = nailMats[i];
+    Object.assign(mat, F.p);
+    mat.sheen = F.sheen ? new THREE.Color(1, 0.97, 1) : null;
+    mat.normalMap = F.normal ? NORMALS[F.normal] : null;
+    const ns = F.normal === 'fine' ? 0.35 : 0.75; mat.normalScale.set(ns, ns);
+    const minA = Math.min(...N.cols.slice(0, PATTERNS[N.pat].uses).map(c => c.a));
+    mat.depthWrite = minA > 0.98;
+    mat.needsUpdate = true; nailTex[i].needsUpdate = true; need = true;
+  }
+  const dirty = new Set(); let paintQueued = false;
+  function queuePaint(list) {
+    list.forEach(i => dirty.add(i));
+    if (paintQueued) return; paintQueued = true;
+    requestAnimationFrame(() => { paintQueued = false; dirty.forEach(paintNail); dirty.clear(); });
+  }
+
+  /* ---------- reconstrução da mão ---------- */
+  function rebuild(draft) {
+    const t0 = performance.now();
+    const h = draft ? Math.max(cell, 0.34) : cell;
+    const m = buildHand(shape, pose, h);
+    const posAttr = new THREE.BufferAttribute(m.pos, 3);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', posAttr);
+    g.setAttribute('normal', new THREE.BufferAttribute(m.nor, 3));
+    const color = new THREE.BufferAttribute(new Float32Array(m.nv * 3), 3);
+    g.setAttribute('color', color);
+    g.setIndex(new THREE.BufferAttribute(m.tris, 1));
+    const w = new THREE.BufferGeometry();
+    w.setAttribute('position', posAttr);
+    w.setIndex(new THREE.BufferAttribute(m.edges, 1));
+    skinMesh.geometry.dispose(); wireMesh.geometry.dispose();
+    skinMesh.geometry = g; wireMesh.geometry = w;
+    cur = { nv: m.nv, wp: m.wp, wr: m.wr, color, sk: m.sk };
+    paintSkin();
+    buildNails();
+    const ms = Math.round(performance.now() - t0);
+    $('stats').innerHTML = m.nv.toLocaleString('pt-BR') + ' vértices · ' + m.nq.toLocaleString('pt-BR') + ' quads<br>aresta ' + pt(h * 10) + ' mm · ' + ms + ' ms' + (draft ? ' (rascunho)' : '');
+  }
+  let queued = false, queuedDraft = false;
+  function schedule(draft) {
+    queuedDraft = draft;
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; rebuild(queuedDraft && cell < 0.34); });
+  }
+
+  /* ---------- decoração ---------- */
+  const stickerCache = new Map();
+  function stickerTex(idx, col) {
+    const k = idx + col; if (stickerCache.has(k)) return stickerCache.get(k);
+    const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+    drawSticker(cv.getContext('2d'), 128, ADESIVOS[idx], col);
+    const t = new THREE.CanvasTexture(cv); t.flipY = false; t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+    stickerCache.set(k, t); return t;
+  }
+  function charmMat(kind, col) {
+    if (kind === 'gem') return new THREE.MeshPhysicalMaterial({ color: lin(col), emissive: lin(col).multiplyScalar(0.06), metalness: 0, roughness: 0.02, clearcoat: 1, clearcoatRoughness: 0, flatShading: true, envMapIntensity: 2.6 });
+    if (kind === 'pearl') return new THREE.MeshPhysicalMaterial({ color: lin(col), roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.05, sheen: new THREE.Color(1, 0.94, 1), envMapIntensity: 1.4 });
+    return new THREE.MeshStandardMaterial({ color: lin(col), metalness: 1, roughness: 0.18, envMapIntensity: 1.4 });
+  }
+  function makeObj(it) {
+    let obj;
+    if (it.cat === 'a') {
+      obj = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ map: stickerTex(it.idx, it.color), transparent: true, alphaTest: 0.04, roughness: 0.35, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+      obj.renderOrder = 3;
+    } else {
+      const P = PINGENTES[it.idx], g = P.geo(), mat = charmMat(P.mat, it.color);
+      if (g.isObject3D) { obj = g; obj.traverse(o => { if (o.isMesh) o.material = mat; }); } else obj = new THREE.Mesh(g, mat);
+      obj.renderOrder = 2;
+    }
+    obj.userData.item = it;
+    it.obj = obj; itemGroup.add(obj);
+  }
+  function recolor(it) {
+    if (it.cat === 'a') { it.obj.material.map = stickerTex(it.idx, it.color); it.obj.material.needsUpdate = true; }
+    else { const k = PINGENTES[it.idx].mat; it.obj.traverse(o => { if (o.isMesh) { o.material.color.copy(lin(it.color)); if (k === 'gem') o.material.emissive.copy(lin(it.color)).multiplyScalar(0.06); } }); }
+    need = true;
+  }
+  const _M = new THREE.Matrix4(), _Rz = new THREE.Matrix4();
+  function frameMatrix(fr, rot) {
+    const z = fr.n, y = fr.t.clone().addScaledVector(z, -fr.t.dot(z)).normalize(), x = new THREE.Vector3().crossVectors(y, z);
+    _M.makeBasis(x, y, z).multiply(_Rz.makeRotationZ(rad(rot)));
+    return _M;
+  }
+  function placeItem(it) {
+    const m = models[it.nail]; if (!m) return;
+    const U = m.unit || 1;
+    const v = clamp(it.vn * m.Lf, 0.05 * U, m.vmax - 0.05 * U);
+    const [l, r] = m.hw(v), x = clamp(it.xn * m.W, -l * 0.95, r * 0.95);
+    if (it.cat === 'a') {
+      const n = 8, s = 0.5 * it.size * U, cr = Math.cos(rad(it.rot)), sr = Math.sin(rad(it.rot));
+      const pos = new Float32Array((n + 1) * (n + 1) * 3), uv = new Float32Array((n + 1) * (n + 1) * 2), o = [0, 0, 0], idx = [];
+      for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
+        const a = i / n - 0.5, b = j / n - 0.5, k = j * (n + 1) + i;
+        m.point(x + (a * cr - b * sr) * s, v + (a * sr + b * cr) * s, m.top + 0.012, o);
+        pos.set(o, k * 3); uv[k * 2] = i / n; uv[k * 2 + 1] = 1 - j / n;
+        if (i < n && j < n) idx.push(k, k + 1, k + n + 1, k + 1, k + n + 2, k + n + 1);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      g.setIndex(idx); g.computeVertexNormals();
+      it.obj.geometry.dispose(); it.obj.geometry = g;
+    } else {
+      const fr = m.frame(x, v, m.top);
+      it.obj.position.copy(fr.p);
+      it.obj.quaternion.setFromRotationMatrix(frameMatrix(fr, it.rot));
+      it.obj.scale.setScalar(0.17 * it.size * U);
+    }
+    if (it === selected) {
+      const fr = m.frame(x, v, m.top + 0.03);
+      selRing.position.copy(fr.p);
+      selRing.quaternion.setFromRotationMatrix(frameMatrix(fr, 0));
+      selRing.scale.setScalar(U * (it.cat === 'a' ? 0.3 * it.size : 0.2 * it.size) * (PINGENTES[it.idx].name.includes('navete') || PINGENTES[it.idx].name.includes('gota') ? 1.6 : 1));
+    }
+    need = true;
+  }
+  const catName = it => (it.cat === 'a' ? ADESIVOS : PINGENTES)[it.idx].name;
+  function addItem(spec, nail, x, v, extra) {
+    const def = (spec.cat === 'a' ? ADESIVOS : PINGENTES)[spec.idx];
+    const it = Object.assign({ cat: spec.cat, idx: spec.idx, nail, xn: x / models[nail].W, vn: v / models[nail].Lf, size: 1, rot: 0, color: itemColor || def.col }, extra || {});
+    makeObj(it); items.push(it); placeItem(it); updateCount();
+    return it;
+  }
+  function select(it) {
+    selected = it;
+    selRing.visible = !!it && mode !== 'wire';
+    $('sel-val').textContent = it ? catName(it) + ' · ' + DEDOS[it.nail].toLowerCase() : 'nenhum';
+    ['sel-dup', 'sel-del'].forEach(id => ($(id).disabled = !it));
+    if (it) { selS.size = it.size; selS.rot = it.rot; syncSliders(); placeItem(it); markItemColor(it.color); }
+    need = true;
+  }
+  function removeItem(it) {
+    itemGroup.remove(it.obj);
+    it.obj.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+    items.splice(items.indexOf(it), 1);
+    if (selected === it) select(null);
+    updateCount();
+  }
+  function updateCount() {
+    const n = items.length;
+    $('deco-count').textContent = n ? n + (n === 1 ? ' item na mão.' : ' itens na mão.') : 'Nenhum item na mão.';
+    $('all-del').disabled = !n; need = true;
+  }
+  function arm(spec) {
+    armed = spec;
+    document.querySelectorAll('#adesivos .tile, #pingentes .tile').forEach(t => t.setAttribute('aria-pressed', String(!!spec && t.dataset.cat === spec.cat && +t.dataset.idx === spec.idx)));
+    $('banner').hidden = !spec;
+    canvas.classList.toggle('place', !!spec);
+    if (spec) $('banner-txt').textContent = 'Toque numa unha para colocar: ' + (spec.cat === 'a' ? ADESIVOS : PINGENTES)[spec.idx].name;
+  }
+  $('banner-stop').addEventListener('click', () => arm(null));
+
+  /* ---------- órbita, seleção e arraste ---------- */
+  let yaw = -0.5, pitch = 0.1, tYaw = yaw, tPitch = pitch, spin = false, dragging = false;
+  function updateCam() { camera.position.set(0, 0, camDist); camera.lookAt(0, 0, 0); need = true; }
+  function setView(v) {
+    if (appMode === 'ar') return;
+    const t = { back: [0, 0], palm: [Math.PI, 0], side: [-Math.PI / 2, 0], nails: [0, 0.45] }[v];
+    tYaw = t[0] + 2 * Math.PI * Math.round((yaw - t[0]) / (2 * Math.PI)); tPitch = t[1]; spin = false;
+    tOffY = v === 'nails' ? -15 : -6; tDist = v === 'nails' ? baseDist * 0.52 : baseDist;
+    $('spin').setAttribute('aria-pressed', 'false');
+  }
+  document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+  $('go-nails').addEventListener('click', () => setView('nails'));
+  $('spin').addEventListener('click', e => { spin = !spin; e.currentTarget.setAttribute('aria-pressed', String(spin)); });
+  $('hand-side').addEventListener('click', e => {
+    const right = flip.scale.x > 0;
+    flip.scale.x = right ? -1 : 1;
+    e.currentTarget.textContent = right ? 'Mão esquerda' : 'Mão direita';
+    e.currentTarget.setAttribute('aria-pressed', String(right)); need = true;
+  });
+  const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  function ray(e) { const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); raycaster.setFromCamera(ndc, activeCam); }
+  function hitNail() { const h = nailGroup.visible ? raycaster.intersectObjects(nailMeshes.filter(n => n.visible), false)[0] : null; return h && h.uv ? { nail: h.object.userData.nail, uv: h.uv } : null; }
+  function hitItem() {
+    const h = raycaster.intersectObjects(items.map(i => i.obj), true)[0]; if (!h) return null;
+    let o = h.object; while (o && !o.userData.item) o = o.parent; return o ? o.userData.item : null;
+  }
+  const ptrs = new Map(); let pinch0 = 0, dist0 = 0;
+  canvas.addEventListener('pointerdown', e => {
+    if (appMode === 'ar') return arDown(e);
+    if (!ptrs.size && nailGroup.visible) {
+      ray(e);
+      let it = hitItem();
+      if (!it && armed) { const h = hitNail(); if (h) { const [x, v] = models[h.nail].fromUV(h.uv.x, h.uv.y); it = addItem(armed, h.nail, x, v); } }
+      if (it) { select(it); dragItem = it; canvas.setPointerCapture(e.pointerId); e.preventDefault(); return; }
+    }
+    canvas.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); dragging = true;
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); dist0 = camDist; }
+  });
+  function moveDragItem(e) {
+    ray(e); const h = hitNail();
+    if (h) { const m = models[h.nail], [x, v] = m.fromUV(h.uv.x, h.uv.y); dragItem.nail = h.nail; dragItem.xn = x / m.W; dragItem.vn = v / m.Lf; placeItem(dragItem); $('sel-val').textContent = catName(dragItem) + ' · ' + DEDOS[dragItem.nail].toLowerCase(); }
+  }
+  canvas.addEventListener('pointermove', e => {
+    if (appMode === 'ar') return arMove(e);
+    if (dragItem) { moveDragItem(e); return; }
+    const p = ptrs.get(e.pointerId); if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+    if (ptrs.size === 1) { yaw += dx * 0.009; pitch = clamp(pitch + dy * 0.009, -1.4, 1.4); tYaw = yaw; tPitch = pitch; need = true; }
+    else if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      camDist = clamp(dist0 * pinch0 / d, 20, 130); tDist = null; updateCam();
+    }
+  });
+  const endPtr = e => { if (appMode === 'ar') return arUp(e); if (dragItem) { dragItem = null; return; } ptrs.delete(e.pointerId); if (!ptrs.size) dragging = false; };
+  canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointercancel', endPtr);
+  canvas.addEventListener('wheel', e => { if (appMode === 'ar') return arWheel(e); e.preventDefault(); camDist = clamp(camDist * Math.exp(e.deltaY * 0.0012), 20, 130); tDist = null; updateCam(); }, { passive: false });
+  window.addEventListener('keydown', e => {
+    if (/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+    if (e.key === 'Escape') arm(null);
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selected) { removeItem(selected); e.preventDefault(); }
+  });
+
+  function resize() {
+    const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    const nb = w / h < 0.9 ? 78 / Math.min(1, w / h * 1.25) : 66;
+    if (Math.abs(camDist - baseDist) < 0.5) camDist = nb;
+    baseDist = nb; updateCam();
+    if (appMode === 'ar') arFrustum();
+  }
+  new ResizeObserver(resize).observe(stage);
+
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (spin && !dragging) { yaw += dt * 0.6; tYaw = yaw; need = true; }
+    else if (!dragging && (Math.abs(tYaw - yaw) > 0.001 || Math.abs(tPitch - pitch) > 0.001)) { yaw += (tYaw - yaw) * 0.16; pitch += (tPitch - pitch) * 0.16; need = true; }
+    if (Math.abs(tOffY - offY) > 0.01) { offY += (tOffY - offY) * 0.14; hand.position.y = offY; need = true; }
+    if (tDist !== null) { if (Math.abs(tDist - camDist) > 0.05) { camDist += (tDist - camDist) * 0.14; updateCam(); } else tDist = null; }
+    if (need) { pivot.rotation.set(pitch, yaw, 0, 'YXZ'); renderer.render(scene, activeCam); arOverlay(); need = false; }
+    requestAnimationFrame(tick);
+  }
+
+  /* ---------- abas ---------- */
+  document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-tab]').forEach(t => t.setAttribute('aria-selected', String(t === b)));
+    ['foto', 'mao', 'unhas', 'deco'].forEach(n => ($('tab-' + n).hidden = n !== b.dataset.tab));
+    if (b.dataset.tab !== 'deco') arm(null);
+  }));
+
+  /* ---------- exibição ---------- */
+  $('modes').addEventListener('click', e => {
+    const b = e.target.closest('[data-mode]'); if (!b) return;
+    mode = b.dataset.mode;
+    $('modes').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+    applySkin();
+  });
+  $('res').addEventListener('click', e => {
+    const b = e.target.closest('[data-cell]'); if (!b) return;
+    cell = +b.dataset.cell;
+    $('res').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+    schedule(false);
+  });
+
+  /* ---------- sliders ---------- */
+  const sliderRefs = {};
+  function makeSlider(host, def, store, onUser) {
+    const [key, label, min, max, step, fmt] = def;
+    const wrap = document.createElement('div'); wrap.className = 'sl';
+    const id = 'sl-' + key;
+    wrap.innerHTML = '<label for="' + id + '">' + label + '</label><output for="' + id + '"></output><input type="range" id="' + id + '" min="' + min + '" max="' + max + '" step="' + step + '">';
+    host.appendChild(wrap);
+    const input = wrap.querySelector('input'), out = wrap.querySelector('output');
+    const fmtv = fmt || (v => Math.round(v * 100) + '%');
+    const show = () => { input.value = store[key]; out.textContent = fmtv(+store[key]); };
+    input.addEventListener('input', () => { store[key] = +input.value; out.textContent = fmtv(+input.value); onUser(true); });
+    input.addEventListener('change', () => onUser(false));
+    sliderRefs[key] = show; show();
+  }
+  const syncSliders = () => Object.values(sliderRefs).forEach(f => f());
+
+  SHAPE_DEF.forEach(d => makeSlider($('shape-sliders'), d, shape, draft => { presetName = 'Personalizada'; markPreset(); schedule(draft); }));
+  POSE_DEF.forEach(d => makeSlider($('pose-sliders'), d, pose, draft => { markPose(); schedule(draft); }));
+  makeSlider($('nlen-host'), ['base', 'Posição da cutícula no dedo', 0.3, 0.65, 0.01, v => Math.round(v * 100) + '% da última falange'], nailOpt, () => buildNails());
+  makeSlider($('nlen-host'), ['len', 'Comprimento da borda livre', 0.3, 1.8, 0.01, v => '×' + pt(v, 2)], nailOpt, () => buildNails());
+  const selS = { size: 1, rot: 0 };
+  makeSlider($('sel-sliders'), ['size', 'Tamanho', 0.4, 2.2, 0.01, v => '×' + pt(v, 2)], selS, () => { if (selected) { selected.size = selS.size; placeItem(selected); } });
+  makeSlider($('sel-sliders'), ['rot', 'Rotação', -180, 180, 1, v => Math.round(v) + '°'], selS, () => { if (selected) { selected.rot = selS.rot; placeItem(selected); } });
+
+  function setShape(arr) { KEYS.forEach((k, i) => (shape[k] = arr[i])); syncSliders(); }
+  function markPreset() {
+    $('preset-name').textContent = presetName;
+    $('presets').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.textContent === presetName)));
+  }
+  PRESETS.forEach(([name, arr]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = name;
+    b.addEventListener('click', () => { presetName = name; setShape(arr); markPreset(); schedule(false); });
+    $('presets').appendChild(b);
+  });
+  $('random').addEventListener('click', () => {
+    const arr = SHAPE_DEF.map(d => Math.round((d[2] + (d[3] - d[2]) * (0.1 + 0.8 * Math.random())) / d[4]) * d[4]);
+    presetName = 'Sorteada'; setShape(arr); markPreset(); schedule(false);
+  });
+  function markPose() {
+    $('poses').querySelectorAll('.chip').forEach((c, i) => {
+      const p = POSES[i][1];
+      c.setAttribute('aria-pressed', String(Object.keys(p).every(k => Math.abs(p[k] - pose[k]) < 0.005)));
+    });
+  }
+  POSES.forEach(([name, p]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = name;
+    b.addEventListener('click', () => { Object.assign(pose, p); syncSliders(); markPose(); schedule(false); });
+    $('poses').appendChild(b);
+  });
+
+  TONES.forEach(([hex, name], i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tone';
+    b.style.background = hex; b.setAttribute('aria-label', 'Tom ' + (i + 1) + ': ' + name); b.title = 'Tom ' + (i + 1) + ' · ' + name;
+    b.setAttribute('aria-pressed', String(i === toneIdx));
+    b.addEventListener('click', () => {
+      toneIdx = i;
+      $('tones').querySelectorAll('.tone').forEach((t, j) => t.setAttribute('aria-pressed', String(j === i)));
+      applySkin();
+    });
+    $('tones').appendChild(b);
+  });
+
+  /* ---------- formatos de unha ---------- */
+  function drawShapeIcon(cv, sh) {
+    const g = cv.getContext('2d'), w = cv.width, h = cv.height;
+    const W = w * 0.2, ext = sh.ext * 1.6 * W, base = h * 0.98, Lf = Math.max(h * 0.3, h * 0.92 - ext), vmax = Lf + ext, cx = w / 2;
+    const vc = Math.min(0.55 * W, Lf * 0.5);
+    const hw = v => { if (v <= Lf) { const q = v < vc ? Math.sqrt(Math.max(0.0025, 1 - (1 - v / vc) ** 2)) : 1; return [W * q, W * q]; } const a = sh.f(Math.min(1, (v - Lf) / ext)); return [W * a[0], W * a[1]]; };
+    const fw = W * 1.45, top = base - Lf - fw * 0.55;
+    g.fillStyle = '#e4b39c';
+    g.beginPath(); g.moveTo(cx - fw, h); g.lineTo(cx - fw, top + fw); g.quadraticCurveTo(cx - fw, top, cx, top); g.quadraticCurveTo(cx + fw, top, cx + fw, top + fw); g.lineTo(cx + fw, h); g.fill();
+    g.beginPath();
+    for (let k = 0; k <= 48; k++) { const v = vmax * k / 48; g.lineTo(cx - hw(v)[0], base - v); }
+    for (let k = 48; k >= 0; k--) { const v = vmax * k / 48; g.lineTo(cx + hw(v)[1], base - v); }
+    g.closePath();
+    g.fillStyle = '#f2c3bd'; g.fill();
+    g.save(); g.clip(); g.fillStyle = '#fbf3ee'; g.fillRect(0, 0, w, base - Lf); g.restore();
+    g.strokeStyle = 'rgba(120,60,50,.45)'; g.lineWidth = 1.5; g.stroke();
+  }
+  NAIL_SHAPES.forEach((sh, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tile';
+    const cv = document.createElement('canvas'); cv.width = 56; cv.height = 96; cv.style.width = '28px'; cv.style.height = '48px';
+    drawShapeIcon(cv, sh);
+    const s = document.createElement('span'); s.textContent = sh.name;
+    b.append(cv, s);
+    b.addEventListener('click', () => { nailOpt.shape = i; markNailShape(); buildNails(); });
+    $('nshapes').appendChild(b);
+  });
+  function markNailShape() {
+    $('nshapes').querySelectorAll('.tile').forEach((t, i) => t.setAttribute('aria-pressed', String(i === nailOpt.shape)));
+    $('nshape-val').textContent = NAIL_SHAPES[nailOpt.shape].name;
+  }
+
+  /* ---------- alvo, desenhos, cores, acabamentos ---------- */
+  const tgt = $('nail-targets');
+  ['all', 0, 1, 2, 3, 4].forEach(t => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip';
+    b.textContent = t === 'all' ? 'Todas' : DEDOS[t]; b.setAttribute('aria-pressed', String(t === 'all'));
+    b.addEventListener('click', () => {
+      target = t;
+      tgt.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+      refreshNailUI();
+    });
+    tgt.appendChild(b);
+  });
+  const patThumbs = [];
+  PATTERNS.forEach((p, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tile';
+    const cv = document.createElement('canvas'); cv.width = 68; cv.height = 108;
+    const s = document.createElement('span'); s.textContent = p.name;
+    b.append(cv, s); patThumbs.push(cv);
+    b.addEventListener('click', () => {
+      targets().forEach(k => (nails[k].pat = i));
+      queuePaint(targets()); refreshNailUI();
+    });
+    $('pats').appendChild(b);
+  });
+  let thumbsQueued = false;
+  function drawThumbs() {
+    if (thumbsQueued) return; thumbsQueued = true;
+    requestAnimationFrame(() => {
+      thumbsQueued = false;
+      const N = nails[ref()], C = N.cols.map(cssCol);
+      patThumbs.forEach((cv, i) => {
+        const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height);
+        g.save(); PATTERNS[i].draw(g, cv.width, cv.height, C, cv.height * 0.3, mulberry(i * 13 + 7)); g.restore();
+      });
+    });
+  }
+  FINISHES.forEach((f, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = f.name;
+    b.addEventListener('click', () => { targets().forEach(k => (nails[k].fin = i)); queuePaint(targets()); refreshNailUI(); });
+    $('finishes').appendChild(b);
+  });
+  const slotBtns = [0, 1, 2].map(k => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'slot';
+    b.innerHTML = '<b><i></i></b><span>Cor ' + (k + 1) + '</span>';
+    b.addEventListener('click', () => { slot = k; refreshNailUI(); });
+    $('slots').appendChild(b); return b;
+  });
+  function refreshNailUI() {
+    const N = nails[ref()], uses = PATTERNS[N.pat].uses;
+    if (slot >= uses) slot = 0;
+    slotBtns.forEach((b, k) => {
+      b.disabled = k >= uses; b.setAttribute('aria-pressed', String(k === slot));
+      b.querySelector('i').style.background = cssCol(N.cols[k]);
+    });
+    $('pats').querySelectorAll('.tile').forEach((t, i) => t.setAttribute('aria-pressed', String(i === N.pat)));
+    $('finishes').querySelectorAll('.chip').forEach((t, i) => t.setAttribute('aria-pressed', String(i === N.fin)));
+    $('pat-val').textContent = PATTERNS[N.pat].name + ' · ' + uses + (uses > 1 ? ' cores' : ' cor');
+    $('fin-val').textContent = FINISHES[N.fin].name;
+    $('fin-desc').textContent = FINISHES[N.fin].desc;
+    $('nail-val').textContent = (target === 'all' ? 'todas' : DEDOS[target].toLowerCase()) + ' · cor ' + (slot + 1);
+    loadPicker(N.cols[slot]);
+    drawThumbs();
+  }
+
+  /* ---------- seletor RGBA ---------- */
+  function rgb2hsv(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0;
+    if (d) { h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+    return [h, mx ? d / mx : 0, mx];
+  }
+  function hsv2rgb(h, s, v) {
+    const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return [Math.round(f(5) * 255), Math.round(f(3) * 255), Math.round(f(1) * 255)];
+  }
+  const svCanvas = $('sv-canvas'), svCtx = svCanvas.getContext('2d');
+  function drawSV() {
+    const w = svCanvas.width, h = svCanvas.height;
+    svCtx.fillStyle = 'hsl(' + hsv.h + ',100%,50%)'; svCtx.fillRect(0, 0, w, h);
+    let g = svCtx.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#fff'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    svCtx.fillStyle = g; svCtx.fillRect(0, 0, w, h);
+    g = svCtx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, '#000');
+    svCtx.fillStyle = g; svCtx.fillRect(0, 0, w, h);
+  }
+  function paintPicker(skipId) {
+    const [r, g, b] = hsv2rgb(hsv.h, hsv.s, hsv.v), a = Math.round(hsv.a * 100) / 100;
+    drawSV();
+    $('sv-dot').style.left = hsv.s * 100 + '%'; $('sv-dot').style.top = (1 - hsv.v) * 100 + '%';
+    $('hue').value = hsv.h; $('alpha').value = Math.round(hsv.a * 100);
+    $('alpha').style.setProperty('--acol', 'rgb(' + r + ',' + g + ',' + b + ')');
+    const vals = { 'in-r': r, 'in-g': g, 'in-b': b, 'in-a': a };
+    for (const id in vals) if (id !== skipId) $(id).value = vals[id];
+    const txt = 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a + ')';
+    $('rgba-text').textContent = txt; $('swatch-now').style.background = txt;
+  }
+  function commit(skipId) {
+    const [r, g, b] = hsv2rgb(hsv.h, hsv.s, hsv.v), c = { r, g, b, a: Math.round(hsv.a * 100) / 100 };
+    targets().forEach(i => (nails[i].cols[slot] = { ...c }));
+    slotBtns[slot].querySelector('i').style.background = cssCol(c);
+    queuePaint(targets()); drawThumbs(); paintPicker(skipId);
+  }
+  function loadPicker(c) {
+    const [h, s, v] = rgb2hsv(c.r, c.g, c.b);
+    if (s > 0 && v > 0) hsv.h = h;
+    hsv.s = s; hsv.v = v; hsv.a = c.a; paintPicker();
+  }
+  const sv = $('sv');
+  const pickSV = e => { const r = sv.getBoundingClientRect(); hsv.s = clamp((e.clientX - r.left) / r.width, 0, 1); hsv.v = 1 - clamp((e.clientY - r.top) / r.height, 0, 1); commit(); };
+  let svDrag = false;
+  sv.addEventListener('pointerdown', e => { svDrag = true; sv.setPointerCapture(e.pointerId); pickSV(e); });
+  sv.addEventListener('pointermove', e => { if (svDrag) pickSV(e); });
+  sv.addEventListener('pointerup', () => (svDrag = false));
+  $('hue').addEventListener('input', e => { hsv.h = +e.target.value; commit(); });
+  $('alpha').addEventListener('input', e => { hsv.a = +e.target.value / 100; commit(); });
+  ['in-r', 'in-g', 'in-b'].forEach(id => $(id).addEventListener('input', () => {
+    const r = clamp(+$('in-r').value || 0, 0, 255), g = clamp(+$('in-g').value || 0, 0, 255), b = clamp(+$('in-b').value || 0, 0, 255);
+    const [h, s, v] = rgb2hsv(r, g, b); if (s > 0 && v > 0) hsv.h = h; hsv.s = s; hsv.v = v; commit(id);
+  }));
+  $('in-a').addEventListener('input', () => { hsv.a = clamp(+$('in-a').value || 0, 0, 1); commit('in-a'); });
+  $('copy').addEventListener('click', () => {
+    const el = $('rgba-text'), btn = $('copy');
+    const done = () => { btn.textContent = 'Copiado'; setTimeout(() => (btn.textContent = 'Copiar'), 1200); };
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+    try { navigator.clipboard.writeText(el.textContent).then(done, fallback); } catch (err) { fallback(); }
+  });
+  ESMALTES.forEach(([name, r, g, b, a]) => {
+    const p = document.createElement('button'); p.type = 'button'; p.className = 'pal';
+    p.title = name + ' · rgba(' + r + ', ' + g + ', ' + b + ', ' + a + ')'; p.setAttribute('aria-label', p.title);
+    p.innerHTML = '<i style="background:rgba(' + r + ',' + g + ',' + b + ',' + a + ')"></i>';
+    p.addEventListener('click', () => { loadPicker({ r, g, b, a }); commit(); });
+    $('palette').appendChild(p);
+  });
+
+  /* ---------- catálogo de adesivos e pingentes ---------- */
+  function catTile(host, cat, idx, name, draw) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tile';
+    b.dataset.cat = cat; b.dataset.idx = idx; b.title = name; b.setAttribute('aria-pressed', 'false');
+    const cv = document.createElement('canvas'); cv.width = cv.height = 80; draw(cv.getContext('2d'));
+    const s = document.createElement('span'); s.textContent = name;
+    b.append(cv, s);
+    b.addEventListener('click', () => {
+      const same = armed && armed.cat === cat && armed.idx === idx;
+      arm(same ? null : { cat, idx });
+      if (!same && tOffY !== -15) setView('nails');
+    });
+    host.appendChild(b);
+  }
+  ADESIVOS.forEach((a, i) => catTile($('adesivos'), 'a', i, a.name, g => drawSticker(g, 80, a, a.col)));
+  PINGENTES.forEach((p, i) => catTile($('pingentes'), 'p', i, p.name, g => drawPingenteIcon(g, 80, i, p.col)));
+  const icol = $('icol');
+  [['Original', null]].concat(ITEM_CORES).forEach(([name, hex]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.title = name; b.setAttribute('aria-label', name);
+    b.dataset.hex = hex || '';
+    b.style.background = hex || 'conic-gradient(#e8336d, #f5c518, #3aa66a, #3d7bff, #9b5de5, #e8336d)';
+    b.addEventListener('click', () => {
+      itemColor = hex; markItemColor(hex);
+      if (selected) { const def = (selected.cat === 'a' ? ADESIVOS : PINGENTES)[selected.idx]; selected.color = hex || def.col; recolor(selected); }
+    });
+    icol.appendChild(b);
+  });
+  function markItemColor(hex) {
+    let found = false;
+    icol.querySelectorAll('button').forEach(b => { const on = (b.dataset.hex || null) === (hex || null); if (on) found = true; b.setAttribute('aria-pressed', String(on)); });
+    if (!found) icol.firstChild.setAttribute('aria-pressed', 'true');
+    const named = ITEM_CORES.find(c => c[1] === hex);
+    $('icol-val').textContent = named ? named[0] : 'Original';
+  }
+  $('sel-del').addEventListener('click', () => selected && removeItem(selected));
+  $('sel-dup').addEventListener('click', () => {
+    if (!selected) return;
+    const s = selected, m = models[s.nail];
+    const U = m.unit || 1, it = addItem({ cat: s.cat, idx: s.idx }, s.nail, s.xn * m.W, Math.min(m.vmax - 0.1 * U, s.vn * m.Lf + 0.35 * s.size * U), { size: s.size, rot: s.rot, color: s.color });
+    select(it);
+  });
+  $('all-del').addEventListener('click', () => { items.slice().forEach(removeItem); });
+
+  /* ---------- tema ---------- */
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyMode);
+  new MutationObserver(applyMode).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  /* =================== MODO AR (por foto) =================== */
+  const AR_TEMPLATES = [
+    { name: 'Mão aberta', tip: 'Dedos juntos e esticados, dorso (costas da mão) virado para a câmera. Mão apoiada numa mesa funciona bem.', pose: { curl: 0, spread: 0.12, thumbOut: 0.35 } },
+    { name: 'Aberta espaçada', tip: 'Dedos bem separados e esticados, dorso virado para a câmera.', pose: { curl: 0, spread: 1.2, thumbOut: 1 } },
+    { name: 'Relaxada', tip: 'Dedos levemente dobrados, como quem apoia a ponta dos dedos na mesa. Fotografe um pouco de cima.', pose: { curl: 0.22, spread: 0.3, thumbOut: 0.5 } },
+    { name: 'Garra', tip: 'Dedos dobrados, com as unhas viradas para a câmera (pose clássica de foto de manicure).', pose: { curl: 0.55, spread: 0.25, thumbOut: 0.35 } },
+    { name: 'Punho', tip: 'Mão fechada, com as unhas dos 4 dedos viradas para a câmera.', pose: { curl: 1, spread: 0, thumbOut: 0 } },
+    { name: 'Só a ponta dos dedos', tip: 'Close nas pontas dos dedos esticados, dorso para a câmera (fica mais nítido).', pose: { curl: 0, spread: 0.2, thumbOut: 0.35 }, crop: true },
+  ];
+  const AR = { tpl: 0, tplData: null, specs: null, adjust: true, iw: 0, ih: 0, pix: null, canvas: null, photo: null, detector: null, detFail: null };
+  const arT = { arScale: 1, arRot: 0 }; let arPrev = { s: 1, r: 0 };
+
+  function computeTemplates() {
+    if (AR.tplData) return;
+    AR.tplData = [];
+    const TW = 150, TH = 180;
+    let r2 = null;
+    try { r2 = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r2.setSize(TW, TH); r2.outputEncoding = THREE.sRGBEncoding; r2.setClearColor(0, 0); } catch (e) { r2 = null; }
+    const sc = new THREE.Scene();
+    sc.add(new THREE.HemisphereLight(0xffffff, 0x8a9196, 0.55));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.6); dl.position.set(-2, 3, 4); sc.add(dl);
+    const skinM = new THREE.MeshStandardMaterial({ color: lin('#d7bd96'), roughness: 0.6 });
+    const nailM = new THREE.MeshStandardMaterial({ color: lin('#fff1ee'), roughness: 0.3 });
+    const S0 = {}; KEYS.forEach((k, i) => (S0[k] = PRESETS[1][1][i]));
+    AR_TEMPLATES.forEach(tp => {
+      const m = buildHand(S0, tp.pose, 0.42);
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(m.pos, 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(m.nor, 3));
+      g.setIndex(new THREE.BufferAttribute(m.tris, 1));
+      const grp = new THREE.Group(); grp.add(new THREE.Mesh(g, skinM));
+      const nm = m.sk.fingers.map((fg, i) => nailModel(fg, i === 0, NAIL_SHAPES[0], 0.5, 0.5));
+      nm.forEach(n => grp.add(new THREE.Mesh(nailGeometry(n), nailM)));
+      // inclinação que mais mostra as unhas dos 4 dedos
+      let pitch = 0, best = -9;
+      for (let a = -1.6; a <= 1.61; a += 0.1) {
+        const q = new THREE.Euler(a, 0, 0); let s = 0;
+        for (let i = 1; i < 5; i++) s += nm[i].frame(0, nm[i].Lf * 0.5, nm[i].top).n.applyEuler(q).z;
+        if (s > best + 0.05) { best = s; pitch = a; }
+      }
+      grp.rotation.set(pitch, 0, 0, 'YXZ'); grp.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      if (tp.crop) { nm.forEach(n => [[0, 0], [0, n.vmax]].forEach(([x, v]) => { const o = n.point(x, v, n.top, [0, 0, 0]); box.expandByPoint(new THREE.Vector3(o[0], o[1], o[2]).applyMatrix4(grp.matrixWorld)); })); box.expandByScalar(1.6); }
+      else box.setFromObject(grp);
+      const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
+      let hh = sz.y / 2 * 1.08, hw = sz.x / 2 * 1.08;
+      if (hw / hh > TW / TH) hh = hw * TH / TW; else hw = hh * TW / TH;
+      const oc = new THREE.OrthographicCamera(-hw, hw, hh, -hh, 0.1, 300); oc.position.set(c.x, c.y, 100); oc.updateMatrixWorld(true);
+      sc.add(grp);
+      let url = '';
+      if (r2) { r2.render(sc, oc); try { url = r2.domElement.toDataURL('image/png'); } catch (e) { url = ''; } }
+      sc.remove(grp);
+      const V = new THREE.Vector3(), asp = TW / TH;
+      const prj = p => { V.set(p[0], p[1], p[2]).applyMatrix4(grp.matrixWorld).project(oc); return [V.x * asp, V.y]; };
+      const nails = nm.map(n => {
+        const o = [0, 0, 0];
+        const b = prj(n.point(0, 0, n.top, o)), t = prj(n.point(0, n.Lf, n.top, o));
+        const s1 = prj(n.point(n.W, n.Lf * 0.5, n.top, o)), s2 = prj(n.point(-n.W, n.Lf * 0.5, n.top, o));
+        const nz = n.frame(0, n.Lf * 0.5, n.top).n.applyEuler(grp.rotation).z;
+        return { b, t, w: Math.hypot(s1[0] - s2[0], s1[1] - s2[1]), on: nz > 0.25 };
+      });
+      AR.tplData.push({ url, nails, aspect: asp });
+      g.dispose(); grp.children.forEach(ch => ch.geometry.dispose());
+    });
+    if (r2) { r2.dispose(); if (r2.forceContextLoss) r2.forceContextLoss(); }
+    skinM.dispose(); nailM.dispose();
+  }
+
+  function buildTemplateTiles() {
+    computeTemplates();
+    const host = $('tpls'); if (host.childNodes.length) return;
+    AR_TEMPLATES.forEach((tp, i) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'tile';
+      const im = document.createElement('img'); im.alt = ''; if (AR.tplData[i].url) im.src = AR.tplData[i].url;
+      const s = document.createElement('span'); s.textContent = tp.name;
+      b.append(im, s);
+      b.addEventListener('click', () => { AR.tpl = i; markTpl(); });
+      host.appendChild(b);
+    });
+    markTpl();
+  }
+  function markTpl() {
+    $('tpls').querySelectorAll('.tile').forEach((t, i) => t.setAttribute('aria-pressed', String(i === AR.tpl)));
+    $('tpl-val').textContent = AR_TEMPLATES[AR.tpl].name;
+    $('tpl-tip').textContent = AR_TEMPLATES[AR.tpl].tip;
+    if (AR.tplData[AR.tpl].url) $('ar-empty-img').src = AR.tplData[AR.tpl].url;
+  }
+
+  /* ---------- detecção (MediaPipe Hand Landmarker, carregado da internet) ---------- */
+  async function getDetector() {
+    if (AR.detector) return AR.detector;
+    if (AR.detFail) throw AR.detFail;
+    const base = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+    const job = (async () => {
+      const mod = await import(base + '/vision_bundle.mjs');
+      const fs = await mod.FilesetResolver.forVisionTasks(base + '/wasm');
+      return mod.HandLandmarker.createFromOptions(fs, {
+        baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task' },
+        runningMode: 'IMAGE', numHands: 1, minHandDetectionConfidence: 0.3, minHandPresenceConfidence: 0.3,
+      });
+    })();
+    const to = new Promise((_, rej) => setTimeout(() => rej(new Error('tempo esgotado')), 25000));
+    try { AR.detector = await Promise.race([job, to]); return AR.detector; }
+    catch (e) { AR.detFail = e; throw e; }
+  }
+  // cor média 3x3 num ponto do mundo (y para cima)
+  function pixAt(x, y) {
+    const P = AR.pix; if (!P) return null;
+    const ix = Math.round(x), iy = Math.round(AR.ih - y);
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const xx = ix + i, yy = iy + j; if (xx < 0 || yy < 0 || xx >= P.width || yy >= P.height) continue;
+      const k = (yy * P.width + xx) * 4; r += P.data[k]; g += P.data[k + 1]; b += P.data[k + 2]; n++;
+    }
+    return n ? [r / n, g / n, b / n] : null;
+  }
+  const cdist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  // mede a largura real do dedo/unha cruzando a imagem na altura do meio da unha
+  function refineWidth(sp, skin) {
+    const mx = (sp.b[0] + sp.t[0]) / 2, my = (sp.b[1] + sp.t[1]) / 2;
+    let dx = sp.t[0] - sp.b[0], dy = sp.t[1] - sp.b[1]; const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+    const px = -dy, py = dx, c0 = pixAt(mx, my); if (!c0) return;
+    const polished = skin && cdist(c0, skin) > 70;
+    const ref = polished ? c0 : (skin || c0);
+    const scan = sgn => {
+      let run = 0;
+      for (let k = 1; k < sp.w * 2.2; k++) {
+        const c = pixAt(mx + px * k * sgn, my + py * k * sgn); if (!c) return k;
+        if (cdist(c, ref) > 58) { if (++run >= 2) return k - 1; } else run = 0;
+      }
+      return null;
+    };
+    const a = scan(1), b = scan(-1); if (a == null || b == null) return;
+    const fw = a + b, est = polished ? sp.w : sp.w / 0.74;
+    if (fw < est * 0.55 || fw > est * 1.8) return;
+    const nw = polished ? fw : fw * 0.74, off = (a - b) / 2;
+    sp.w = clamp(nw, sp.w * 0.6, sp.w * 1.6);
+    sp.b = [sp.b[0] + px * off, sp.b[1] + py * off]; sp.t = [sp.t[0] + px * off, sp.t[1] + py * off];
+  }
+  function specsFromLandmarks(L) {
+    const P = k => [L[k].x * AR.iw, (1 - L[k].y) * AR.ih];
+    const sk = (() => { const a = P(10), b = P(11); return pixAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2); })();
+    return [[2, 3, 4], [6, 7, 8], [10, 11, 12], [14, 15, 16], [18, 19, 20]].map(([a, b, c], i) => {
+      const pp = P(a), d = P(b), t = P(c);
+      let sx = t[0] - d[0], sy = t[1] - d[1];
+      const base = [d[0] + sx * 0.42, d[1] + sy * 0.42];
+      let tip = [d[0] + sx * 0.93, d[1] + sy * 0.93];
+      const w = Math.hypot(d[0] - pp[0], d[1] - pp[1]) * (i === 0 ? 0.62 : 0.5);
+      let len = Math.hypot(tip[0] - base[0], tip[1] - base[1]);
+      if (len < 0.8 * w) { // dedo apontando para a câmera: a unha aparece de frente
+        let ux = len > 1 ? (tip[0] - base[0]) / len : (d[0] - pp[0]), uy = len > 1 ? (tip[1] - base[1]) / len : (d[1] - pp[1]);
+        const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
+        tip = [base[0] + ux * 0.8 * w, base[1] + uy * 0.8 * w];
+      }
+      const sp = { b: base, t: tip, w, on: true };
+      refineWidth(sp, sk);
+      return sp;
+    });
+  }
+  function specsFromTemplate() {
+    const T = AR.tplData[AR.tpl];
+    const S = Math.min(0.46 * AR.ih, 0.46 * AR.iw / T.aspect);
+    const map = p => [AR.iw / 2 + p[0] * S, AR.ih / 2 + p[1] * S];
+    return T.nails.map(n => ({ b: map(n.b), t: map(n.t), w: n.w * S, on: n.on }));
+  }
+  const arStatus = t => ($('ar-status').textContent = t);
+
+  async function detectNails() {
+    if (!AR.canvas) return;
+    arStatus('Procurando as unhas na foto...');
+    const tname = '"' + AR_TEMPLATES[AR.tpl].name + '"';
+    let specs = null, how = 'fail';
+    try {
+      const det = await getDetector();
+      const r = det.detect(AR.canvas);
+      if (r && r.landmarks && r.landmarks[0]) { specs = specsFromLandmarks(r.landmarks[0]); how = 'auto'; } else how = 'nohand';
+    } catch (e) { how = 'fail'; }
+    if (specs) specs.forEach((s, i) => (s.on = AR.tplData[AR.tpl].nails[i].on || AR.tpl < 3));
+    else specs = specsFromTemplate();
+    setSpecs(specs);
+    arStatus(how === 'auto' ? 'Encontrei a mão e encaixei as unhas automaticamente. Confira e ajuste as alças se precisar.'
+      : how === 'nohand' ? 'Não encontrei uma mão na foto. Posicionei as unhas pelo modelo ' + tname + ': arraste para encaixar em cada unha.'
+        : 'A detecção automática não carregou aqui (ela baixa um modelo de IA da internet, e alguns sites bloqueiam isso). Posicionei as unhas pelo modelo ' + tname + ': arraste para encaixar em cada unha.');
+  }
+  function setSpecs(specs) {
+    AR.specs = specs; arT.arScale = 1; arT.arRot = 0; arPrev = { s: 1, r: 0 }; syncSliders();
+    markVis(); buildARNails(); applyMode();
+  }
+
+  async function loadPhoto(file) {
+    if (!file) return;
+    arStatus('Carregando a foto...');
+    const url = URL.createObjectURL(file), img = new Image();
+    img.src = url;
+    try { await img.decode(); } catch (e) { arStatus('Não consegui abrir essa imagem. Tente outra foto (JPG ou PNG).'); return; }
+    const s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * s); cv.height = Math.round(img.naturalHeight * s);
+    const g = cv.getContext('2d'); g.drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+    AR.canvas = cv; AR.iw = cv.width; AR.ih = cv.height; AR.pix = g.getImageData(0, 0, cv.width, cv.height);
+    if (AR.photo) { arGroup.remove(AR.photo); AR.photo.geometry.dispose(); AR.photo.material.map.dispose(); AR.photo.material.dispose(); }
+    const tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
+    AR.photo = new THREE.Mesh(new THREE.PlaneGeometry(AR.iw, AR.ih), new THREE.MeshBasicMaterial({ map: tex, depthWrite: false }));
+    AR.photo.position.set(AR.iw / 2, AR.ih / 2, -500); AR.photo.renderOrder = -1;
+    arGroup.add(AR.photo);
+    $('ar-empty').hidden = true;
+    arFit();
+    await detectNails();
+  }
+  ['ph-cam', 'ph-gal'].forEach(id => $(id).addEventListener('change', e => { loadPhoto(e.target.files[0]); e.target.value = ''; }));
+  $('ar-redetect').addEventListener('click', () => detectNails());
+  $('ar-tplfit').addEventListener('click', () => { if (!AR.canvas) return; setSpecs(specsFromTemplate()); arStatus('Unhas posicionadas pelo modelo "' + AR_TEMPLATES[AR.tpl].name + '". Arraste para encaixar.'); });
+  $('ar-adjust').addEventListener('click', e => { AR.adjust = !AR.adjust; e.currentTarget.setAttribute('aria-pressed', String(AR.adjust)); need = true; });
+  const vis = $('ar-vis');
+  DEDOS.forEach((n, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = n;
+    b.addEventListener('click', () => { if (!AR.specs) return; AR.specs[i].on = !AR.specs[i].on; markVis(); buildARNails(); });
+    vis.appendChild(b);
+  });
+  function markVis() { vis.querySelectorAll('.chip').forEach((c, i) => c.setAttribute('aria-pressed', String(!!AR.specs && AR.specs[i].on))); }
+  const specCenter = () => { let x = 0, y = 0, n = 0; AR.specs.forEach(s => { if (s.on) { x += s.b[0] + s.t[0]; y += s.b[1] + s.t[1]; n += 2; } }); return n ? [x / n, y / n] : [AR.iw / 2, AR.ih / 2]; };
+  function transformAll() {
+    if (!AR.specs) return;
+    const ds = arT.arScale / arPrev.s, dr = rad(arT.arRot - arPrev.r); arPrev = { s: arT.arScale, r: arT.arRot };
+    const [cx, cy] = specCenter(), c = Math.cos(dr), s = Math.sin(dr);
+    const tr = p => { const x = (p[0] - cx) * ds, y = (p[1] - cy) * ds; return [cx + x * c - y * s, cy + x * s + y * c]; };
+    AR.specs.forEach(sp => { sp.b = tr(sp.b); sp.t = tr(sp.t); sp.w *= ds; });
+    buildARNails();
+  }
+  makeSlider($('ar-sliders'), ['arScale', 'Escala de todas as unhas', 0.4, 2.5, 0.01, v => '×' + pt(v, 2)], arT, transformAll);
+  makeSlider($('ar-sliders'), ['arRot', 'Girar todas as unhas', -180, 180, 1, v => Math.round(v) + '°'], arT, transformAll);
+
+  function buildARNails() {
+    if (!AR.specs) return;
+    const sh = NAIL_SHAPES[nailOpt.shape];
+    models = AR.specs.map(s => flatNailModel(s, sh, nailOpt.len));
+    for (let i = 0; i < 5; i++) {
+      nailMeshes[i].geometry.dispose(); nailMeshes[i].geometry = nailGeometry(models[i], 34, 28);
+      nailMeshes[i].visible = AR.specs[i].on; paintNail(i);
+    }
+    items.forEach(it => { placeItem(it); it.obj.visible = AR.specs[it.nail].on; });
+    if (selected && !AR.specs[selected.nail].on) select(null);
+    need = true;
+  }
+  let arNailQueued = false;
+  function queueARNails() { if (arNailQueued) return; arNailQueued = true; requestAnimationFrame(() => { arNailQueued = false; buildARNails(); }); }
+
+  /* ---------- câmera ortográfica sobre a foto ---------- */
+  function arFrustum() {
+    const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+    const s = AR.iw ? Math.max(AR.iw / w, AR.ih / h) * 1.06 : 1;
+    ocam.left = -w * s / 2; ocam.right = w * s / 2; ocam.top = h * s / 2; ocam.bottom = -h * s / 2;
+    ocam.updateProjectionMatrix(); need = true;
+  }
+  function arFit() { ocam.zoom = 1; ocam.position.set(AR.iw / 2, AR.ih / 2, 1000); arFrustum(); }
+  const _sv = new THREE.Vector3();
+  function s2w(sx, sy) { _sv.set(sx / stage.clientWidth * 2 - 1, -(sy / stage.clientHeight) * 2 + 1, 0).unproject(ocam); return [_sv.x, _sv.y]; }
+  function w2s(x, y) { _sv.set(x, y, 0).project(ocam); return [(_sv.x + 1) / 2 * stage.clientWidth, (1 - _sv.y) / 2 * stage.clientHeight]; }
+  function handlesOf(i) {
+    const sp = AR.specs[i]; let dx = sp.t[0] - sp.b[0], dy = sp.t[1] - sp.b[1]; const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+    const mx = (sp.b[0] + sp.t[0]) / 2, my = (sp.b[1] + sp.t[1]) / 2, hw = sp.w / 2;
+    return { b: w2s(sp.b[0], sp.b[1]), t: w2s(sp.t[0], sp.t[1]), l: w2s(mx - dy * hw, my + dx * hw), r: w2s(mx + dy * hw, my - dx * hw) };
+  }
+  const ov = $('ov'), og = ov.getContext('2d');
+  function arOverlay() {
+    const w = stage.clientWidth, h = stage.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (ov.width !== Math.round(w * dpr) || ov.height !== Math.round(h * dpr)) { ov.width = Math.round(w * dpr); ov.height = Math.round(h * dpr); }
+    og.setTransform(dpr, 0, 0, dpr, 0, 0); og.clearRect(0, 0, w, h);
+    if (appMode !== 'ar' || !AR.specs || !AR.adjust) return;
+    const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#0e7c86';
+    AR.specs.forEach((sp, i) => {
+      if (!sp.on) return;
+      const H = handlesOf(i), on = target === i;
+      og.lineWidth = on ? 2 : 1.25; og.strokeStyle = on ? acc : 'rgba(255,255,255,.85)'; og.fillStyle = on ? acc : 'rgba(20,24,26,.55)';
+      og.setLineDash([5, 4]); og.beginPath(); og.moveTo(H.b[0], H.b[1]); og.lineTo(H.t[0], H.t[1]); og.moveTo(H.l[0], H.l[1]); og.lineTo(H.r[0], H.r[1]); og.stroke(); og.setLineDash([]);
+      [['b', 7], ['t', 6]].forEach(([k, r]) => { og.beginPath(); og.arc(H[k][0], H[k][1], r, 0, 7); og.fill(); og.strokeStyle = '#fff'; og.lineWidth = 2; og.stroke(); });
+      ['l', 'r'].forEach(k => { og.fillRect(H[k][0] - 5, H[k][1] - 5, 10, 10); og.strokeStyle = '#fff'; og.lineWidth = 1.5; og.strokeRect(H[k][0] - 5, H[k][1] - 5, 10, 10); });
+      og.font = '600 11px ' + (getComputedStyle(document.body).fontFamily || 'sans-serif'); og.fillStyle = '#fff'; og.strokeStyle = 'rgba(0,0,0,.6)'; og.lineWidth = 3;
+      const lbl = DEDOS[i][0] + DEDOS[i].slice(1, 3); og.strokeText(lbl, H.b[0] + 10, H.b[1] + 14); og.fillText(lbl, H.b[0] + 10, H.b[1] + 14);
+    });
+  }
+  function hitHandle(sx, sy) {
+    if (!AR.specs || !AR.adjust) return null;
+    const order = [0, 1, 2, 3, 4].sort((a, b) => (b === target) - (a === target));
+    for (const i of order) {
+      if (!AR.specs[i].on) continue;
+      const H = handlesOf(i);
+      for (const k of ['b', 't', 'l', 'r']) if (Math.hypot(H[k][0] - sx, H[k][1] - sy) < 16) return { i, k: k === 'l' || k === 'r' ? 'w' : k };
+    }
+    return null;
+  }
+  function setTarget(i) {
+    target = i;
+    tgt.querySelectorAll('.chip').forEach((c, k) => c.setAttribute('aria-pressed', String(k === i + 1)));
+    refreshNailUI(); need = true;
+  }
+
+  /* ---------- toques no modo AR ---------- */
+  const arPtrs = new Map(); let arDrag = null;
+  function arDown(e) {
+    canvas.setPointerCapture(e.pointerId);
+    arPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (arPtrs.size === 2) { const [a, b] = [...arPtrs.values()]; arDrag = { type: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: ocam.zoom }; dragItem = null; return; }
+    const r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
+    if (AR.specs) {
+      ray(e);
+      let it = hitItem();
+      if (!it && armed) { const h = hitNail(); if (h) { const [x, v] = models[h.nail].fromUV(h.uv.x, h.uv.y); it = addItem(armed, h.nail, x, v); } }
+      if (it) { select(it); dragItem = it; arDrag = { type: 'item' }; return; }
+      const hh = hitHandle(sx, sy);
+      if (hh) { setTarget(hh.i); arDrag = { type: 'edit', i: hh.i, k: hh.k, last: s2w(sx, sy) }; return; }
+      const h = hitNail();
+      if (h) { setTarget(h.nail); arDrag = AR.adjust ? { type: 'edit', i: h.nail, k: 'body', last: s2w(sx, sy) } : null; if (arDrag) return; }
+    }
+    arDrag = { type: 'pan', x: e.clientX, y: e.clientY };
+  }
+  function arMove(e) {
+    const p = arPtrs.get(e.pointerId); if (!p) return;
+    p.x = e.clientX; p.y = e.clientY;
+    if (!arDrag) return;
+    const r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
+    if (arDrag.type === 'pinch' && arPtrs.size === 2) {
+      const [a, b] = [...arPtrs.values()];
+      ocam.zoom = clamp(arDrag.z0 * Math.hypot(a.x - b.x, a.y - b.y) / arDrag.d0, 0.5, 12); ocam.updateProjectionMatrix(); need = true;
+    } else if (arDrag.type === 'item') moveDragItem(e);
+    else if (arDrag.type === 'pan') {
+      const k = (ocam.right - ocam.left) / stage.clientWidth / ocam.zoom;
+      ocam.position.x -= (e.clientX - arDrag.x) * k; ocam.position.y += (e.clientY - arDrag.y) * k;
+      arDrag.x = e.clientX; arDrag.y = e.clientY; need = true;
+    } else if (arDrag.type === 'edit') {
+      const w = s2w(sx, sy), dx = w[0] - arDrag.last[0], dy = w[1] - arDrag.last[1]; arDrag.last = w;
+      const sp = AR.specs[arDrag.i];
+      if (arDrag.k === 'b' || arDrag.k === 'body') sp.b = [sp.b[0] + dx, sp.b[1] + dy];
+      if (arDrag.k === 't' || arDrag.k === 'body') sp.t = [sp.t[0] + dx, sp.t[1] + dy];
+      if (arDrag.k === 'w') {
+        let ax = sp.t[0] - sp.b[0], ay = sp.t[1] - sp.b[1]; const L = Math.hypot(ax, ay) || 1; ax /= L; ay /= L;
+        const mx = (sp.b[0] + sp.t[0]) / 2, my = (sp.b[1] + sp.t[1]) / 2;
+        sp.w = Math.max(4, 2 * Math.abs((w[0] - mx) * -ay + (w[1] - my) * ax));
+      }
+      queueARNails();
+    }
+  }
+  function arUp(e) {
+    arPtrs.delete(e.pointerId);
+    if (arDrag && arDrag.type === 'item') dragItem = null;
+    if (!arPtrs.size || (arDrag && arDrag.type === 'pinch')) arDrag = null;
+  }
+  function arWheel(e) {
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
+    const a = s2w(sx, sy);
+    ocam.zoom = clamp(ocam.zoom * Math.exp(-e.deltaY * 0.0015), 0.5, 12); ocam.updateProjectionMatrix();
+    const b = s2w(sx, sy); ocam.position.x += a[0] - b[0]; ocam.position.y += a[1] - b[1]; need = true;
+  }
+
+  /* ---------- troca de modo ---------- */
+  function setAppMode(m) {
+    appMode = m;
+    const ar = m === 'ar';
+    $('start').hidden = true;
+    (ar ? arGroup : hand).add(nailGroup, itemGroup, selRing);
+    (ar ? ocam : camera).add(rig);
+    activeCam = ar ? ocam : camera;
+    pivot.visible = !ar;
+    $('hud3d').hidden = ar;
+    $('hint').textContent = ar ? 'arraste para mover a foto · role ou pinça para zoom' : 'arraste para girar · role para zoom';
+    document.querySelector('[data-tab="foto"]').hidden = !ar;
+    document.querySelector('[data-tab="mao"]').hidden = ar;
+    document.querySelector('[data-tab="' + (ar ? 'foto' : 'mao') + '"]').click();
+    canvas.setAttribute('aria-label', ar ? 'Foto da mão com as unhas editáveis.' : 'Mão 3D. Arraste para girar, role para aproximar.');
+    if (ar) {
+      buildTemplateTiles();
+      $('ar-empty').hidden = !!AR.canvas;
+      if (AR.canvas) { arFrustum(); buildARNails(); }
+    } else {
+      $('ar-empty').hidden = true;
+      nailMeshes.forEach(n => (n.visible = true)); items.forEach(it => (it.obj.visible = true));
+      buildNails();
+    }
+    applyMode(); need = true;
+  }
+  $('go-3d').addEventListener('click', () => setAppMode('3d'));
+  $('go-ar').addEventListener('click', () => setAppMode('ar'));
+  $('switch-mode').addEventListener('click', () => { $('start').hidden = false; });
+
+
+  /* ---------- início ---------- */
+  setShape(PRESETS[1][1]); Object.assign(pose, POSES[1][1]); syncSliders();
+  markPreset(); markPose(); markNailShape(); markItemColor(null);
+  // exemplo de decoração: unhas do anelar e do médio diferentes
+  nails[3] = { pat: 6, fin: 1, cols: [{ r: 214, g: 222, b: 240, a: 0.95 }, { r: 128, g: 140, b: 222, a: 0.9 }, { r: 200, g: 204, b: 210, a: 1 }] };
+  nails[2] = { pat: 0, fin: 1, cols: [{ r: 128, g: 140, b: 222, a: 1 }, { r: 255, g: 255, b: 255, a: 1 }, { r: 255, g: 255, b: 255, a: 1 }] };
+  refreshNailUI();
+  applySkin();
+  resize();
+  rebuild(false);
+  addItem({ cat: 'p', idx: 0 }, 3, 0, models[3].Lf * 0.3, { color: '#f4f8ff' });
+  addItem({ cat: 'p', idx: 6 }, 3, 0.18, models[3].Lf * 0.62, { size: 0.6, color: '#fbf6ee' });
+  select(null); updateCount();
+  requestAnimationFrame(tick);
+})();
+</script>
